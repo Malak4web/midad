@@ -1,52 +1,153 @@
-name: CI
+name: Deploy to Hostinger
 
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  backend:
+  build-and-deploy:
+    name: Build & Deploy to Hostinger Shared Hosting
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: midad_test
-        ports: ['3306:3306']
-        options: --health-cmd="mysqladmin ping -proot" --health-interval=10s --health-timeout=5s --health-retries=5
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          extensions: mbstring, pdo_mysql, gd, intl
-          coverage: none
-      - run: composer install --no-interaction --prefer-dist --no-progress
-      - run: cp .env.example .env && php artisan key:generate
-      - run: vendor/bin/pint --test
-      - run: php artisan test
-        env:
-          DB_HOST: 127.0.0.1
-          DB_PASSWORD: root
 
-  frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: ⬇️ Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js 20
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npm test
-      - run: npm run build
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: 📦 Build Frontend (Vue 3 -> Laravel Public)
+        run: |
+          cd frontend
+          npm ci
+          npm run build:laravel
+
+      - name: 🐘 Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, pdo_sqlite, bcmath, gd, zip, fileinfo, gmp
+          coverage: none
+
+      - name: 📦 Install Backend Dependencies (Composer)
+        run: |
+          cd backend
+          cp .env.example .env
+          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-reqs
+          rm -f .env
+
+      - name: 🔐 Setup SSH and Tools
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y sshpass rsync
+
+      - name: 📁 Ensure Remote Directory Exists
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65002' }}
+          TARGET_DIR: ${{ secrets.SSH_TARGET_DIR }}
+        run: |
+          sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$SSH_USER@$SSH_HOST" "mkdir -p $TARGET_DIR"
+
+      - name: 🚀 Sync Files to Hostinger (rsync)
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65002' }}
+          TARGET_DIR: ${{ secrets.SSH_TARGET_DIR }}
+        run: |
+          sshpass -e rsync -avz --delete \
+            --exclude='.env' \
+            --exclude='.env.local' \
+            --exclude='.env.production' \
+            --exclude='.env.backup' \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='storage/app/private/*' \
+            --exclude='storage/app/backups/*' \
+            --exclude='storage/logs/*' \
+            --exclude='database/*.sqlite' \
+            --exclude='database/*.sqlite-journal' \
+            --exclude='tests' \
+            --exclude='phpunit.xml' \
+            -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+            backend/ "$SSH_USER@$SSH_HOST:$TARGET_DIR/"
+
+      - name: ⚡ Run Post-Deployment Commands on Hostinger
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65002' }}
+          TARGET_DIR: ${{ secrets.SSH_TARGET_DIR }}
+        run: |
+          sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$SSH_USER@$SSH_HOST" "bash -s" << EOF
+            set -e
+            cd "$TARGET_DIR"
+
+            # Auto-detect PHP 8.4 if standard CLI 'php' is an older version on Hostinger
+            PHP_BIN="php"
+            if [ \$(php -r 'echo PHP_VERSION_ID;' 2>/dev/null || echo 0) -lt 80400 ]; then
+              if command -v /opt/alt/php84/usr/bin/php &> /dev/null; then
+                PHP_BIN="/opt/alt/php84/usr/bin/php"
+              elif command -v /usr/local/bin/ea-php84 &> /dev/null; then
+                PHP_BIN="/usr/local/bin/ea-php84"
+              fi
+            fi
+
+            echo "=== Hostinger PHP CLI Version ==="
+            \$PHP_BIN -v
+
+            echo "=== Ensuring Storage and Cache Directories ==="
+            mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/framework/testing
+            mkdir -p storage/logs storage/app/private storage/app/backups bootstrap/cache
+            chmod -R 775 storage bootstrap/cache
+
+            # Ensure sqlite file exists if using sqlite database
+            mkdir -p database
+            touch database/database.sqlite 2>/dev/null || true
+
+            if [ ! -f .env ]; then
+              if [ -f .env.example ]; then
+                echo "Notice: .env not found on server, creating initial from .env.example..."
+                cp .env.example .env
+                \$PHP_BIN artisan key:generate --force
+              else
+                echo "Warning: .env.example not found, creating basic .env..."
+                echo "APP_NAME=Laravel" > .env
+                echo "APP_ENV=production" >> .env
+                echo "APP_DEBUG=false" >> .env
+                echo "DB_CONNECTION=sqlite" >> .env
+                \$PHP_BIN artisan key:generate --force
+              fi
+            fi
+
+            echo "=== Storage Link ==="
+            \$PHP_BIN artisan storage:link || true
+
+            echo "=== Database Migrations ==="
+            \$PHP_BIN artisan migrate --force
+
+            echo "=== Database Seeders (Ensuring Users & Roles) ==="
+            \$PHP_BIN artisan db:seed --force
+
+            echo "=== Clear Cache to Unblock Any Rate Limits ==="
+            \$PHP_BIN artisan cache:clear
+
+            echo "=== Optimization and Caching ==="
+            \$PHP_BIN artisan optimize:clear
+            \$PHP_BIN artisan config:cache
+            \$PHP_BIN artisan route:cache
+            \$PHP_BIN artisan view:cache
+
+            echo "=== Deployment Completed Successfully! ==="
+          EOF

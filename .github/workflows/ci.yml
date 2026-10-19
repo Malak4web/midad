@@ -158,6 +158,14 @@ jobs:
             echo "=== Hostinger PHP CLI Version in use ==="
             $PHP_BIN -v
 
+            # Ensure user's SSH terminal also defaults to PHP 8.4
+            if [ -x "/opt/alt/php84/usr/bin/php" ]; then
+              if ! grep -q "/opt/alt/php84/usr/bin" ~/.bashrc 2>/dev/null; then
+                echo 'export PATH="/opt/alt/php84/usr/bin:$PATH"' >> ~/.bashrc
+                echo 'alias php="/opt/alt/php84/usr/bin/php"' >> ~/.bashrc
+              fi
+            fi
+
             echo "=== Ensuring Storage and Cache Directories ==="
             mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/framework/testing
             mkdir -p storage/logs storage/app/public storage/app/private storage/app/backups bootstrap/cache
@@ -167,19 +175,28 @@ jobs:
             mkdir -p database
             touch database/database.sqlite 2>/dev/null || true
 
+            # Ensure .env exists
             if [ ! -f .env ]; then
               if [ -f .env.example ]; then
-                echo "Notice: .env not found on server, creating initial from .env.example..."
+                echo "Notice: .env not found on server, copying from .env.example..."
                 cp .env.example .env
-                $PHP_BIN artisan key:generate --force || echo "⚠️ Warning: key:generate failed."
               else
                 echo "Warning: .env.example not found, creating basic .env..."
                 echo "APP_NAME=Midad" > .env
                 echo "APP_ENV=production" >> .env
+                echo "APP_KEY=" >> .env
                 echo "APP_DEBUG=false" >> .env
                 echo "DB_CONNECTION=sqlite" >> .env
-                $PHP_BIN artisan key:generate --force || echo "⚠️ Warning: key:generate failed."
               fi
+            fi
+
+            # Ensure APP_KEY is populated
+            if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null; then
+              if ! grep -q "^APP_KEY=" .env 2>/dev/null; then
+                echo "APP_KEY=" >> .env
+              fi
+              echo "Generating application encryption key..."
+              $PHP_BIN artisan key:generate --force || true
             fi
 
             echo "=== Storage Symlink ==="

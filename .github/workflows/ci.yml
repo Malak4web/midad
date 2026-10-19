@@ -91,7 +91,10 @@ jobs:
 
           rsync -avz --delete \
             --exclude='.env' \
-            --exclude='.env.*' \
+            --exclude='.env.local' \
+            --exclude='.env.production' \
+            --exclude='.env.backup' \
+            --exclude='.env.testing' \
             --exclude='.git*' \
             --exclude='.github' \
             --exclude='node_modules' \
@@ -128,24 +131,31 @@ jobs:
             TARGET_DIR="$1"
             cd "$TARGET_DIR"
 
-            # Auto-detect PHP 8.4 or 8.3 CLI binary on Hostinger
+            # Auto-detect PHP 8.4 CLI binary on Hostinger (Required by Laravel / Symfony 8)
             PHP_BIN="php"
-            if [ $(php -r 'echo PHP_VERSION_ID;' 2>/dev/null || echo 0) -lt 80300 ]; then
+            CURRENT_VER=$($PHP_BIN -r 'echo PHP_VERSION_ID;' 2>/dev/null || echo 0)
+
+            if [ "$CURRENT_VER" -lt 80400 ]; then
+              echo "Notice: Default php CLI is version ID $CURRENT_VER (< 8.4). Searching for PHP 8.4 on Hostinger..."
               for candidate in \
                 /opt/alt/php84/usr/bin/php \
-                /opt/alt/php83/usr/bin/php \
                 /usr/local/bin/ea-php84 \
-                /usr/local/bin/ea-php83 \
                 /usr/bin/php8.4 \
-                /usr/bin/php8.3; do
-                if command -v "$candidate" &> /dev/null; then
-                  PHP_BIN="$candidate"
-                  break
+                /usr/bin/php84 \
+                $(command -v php8.4 2>/dev/null || true) \
+                $(command -v php84 2>/dev/null || true); do
+                if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+                  cver=$($candidate -r 'echo PHP_VERSION_ID;' 2>/dev/null || echo 0)
+                  if [ "$cver" -ge 80400 ]; then
+                    PHP_BIN="$candidate"
+                    echo "Found and selected PHP 8.4: $PHP_BIN ($cver)"
+                    break
+                  fi
                 fi
               done
             fi
 
-            echo "=== Hostinger PHP CLI Version ==="
+            echo "=== Hostinger PHP CLI Version in use ==="
             $PHP_BIN -v
 
             echo "=== Ensuring Storage and Cache Directories ==="
@@ -161,14 +171,14 @@ jobs:
               if [ -f .env.example ]; then
                 echo "Notice: .env not found on server, creating initial from .env.example..."
                 cp .env.example .env
-                $PHP_BIN artisan key:generate --force
+                $PHP_BIN artisan key:generate --force || echo "⚠️ Warning: key:generate failed."
               else
                 echo "Warning: .env.example not found, creating basic .env..."
                 echo "APP_NAME=Midad" > .env
                 echo "APP_ENV=production" >> .env
                 echo "APP_DEBUG=false" >> .env
                 echo "DB_CONNECTION=sqlite" >> .env
-                $PHP_BIN artisan key:generate --force
+                $PHP_BIN artisan key:generate --force || echo "⚠️ Warning: key:generate failed."
               fi
             fi
 

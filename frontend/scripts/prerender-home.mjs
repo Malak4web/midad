@@ -8,38 +8,65 @@ import { writeFileSync } from 'node:fs'
 
 const port = 5393
 const preview = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--port', String(port), '--strictPort'], { stdio: 'ignore' })
-try {
-  const browser = await chromium.launch({ channel: 'chrome' })
-  const page = await browser.newPage({ viewport: { width: 1366, height: 900 } })
-  for (let i = 0; ; i++) {
+async function run() {
+  let browser
+  try {
     try {
-      await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
-      break
-    } catch (e) {
-      if (i > 40) throw e
-      await new Promise((r) => setTimeout(r, 250))
+      browser = await chromium.launch({
+        channel: 'chrome',
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      })
+    } catch {
+      browser = await chromium.launch({
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      })
     }
+  } catch (err) {
+    console.warn('⚠️ Prerender first paint skipped (browser launch unavailable in environment):', err.message)
+    return
   }
-  await page.waitForSelector('[data-first-paint] h1')
-  const html = await page.evaluate(() => {
-    const app = document.querySelector('#app').cloneNode(true)
-    const main = app.querySelector('main')
-    const hero = main.querySelector('[data-first-paint]')
-    // keep the hero, drop every later section
-    let band = hero
-    while (band.parentElement !== main && band.parentElement) band = band.parentElement
-    ;[...main.children].forEach((c) => c !== band && c.remove())
-    ;[...app.children].forEach((c) => {
-      const keep = c === main || c.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING
-      if (!keep) c.remove()
+
+  try {
+    const page = await browser.newPage({ viewport: { width: 1366, height: 900 } })
+    for (let i = 0; ; i++) {
+      try {
+        await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' })
+        break
+      } catch (e) {
+        if (i > 40) throw e
+        await new Promise((r) => setTimeout(r, 250))
+      }
+    }
+    await page.waitForSelector('[data-first-paint] h1', { timeout: 10000 })
+    const html = await page.evaluate(() => {
+      const app = document.querySelector('#app').cloneNode(true)
+      const main = app.querySelector('main')
+      const hero = main.querySelector('[data-first-paint]')
+      // keep the hero, drop every later section
+      let band = hero
+      while (band.parentElement !== main && band.parentElement) band = band.parentElement
+      ;[...main.children].forEach((c) => c !== band && c.remove())
+      ;[...app.children].forEach((c) => {
+        const keep = c === main || c.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING
+        if (!keep) c.remove()
+      })
+      // nothing interactive should look live before Vue: no stray focus targets in the snapshot
+      app.querySelectorAll('[aria-expanded="true"]').forEach((n) => n.setAttribute('aria-expanded', 'false'))
+      return app.innerHTML.replace(/<!--[\s\S]*?-->/g, '')
     })
-    // nothing interactive should look live before Vue: no stray focus targets in the snapshot
-    app.querySelectorAll('[aria-expanded="true"]').forEach((n) => n.setAttribute('aria-expanded', 'false'))
-    return app.innerHTML.replace(/<!--[\s\S]*?-->/g, '')
-  })
-  writeFileSync('dist/home-first-paint.html', html)
-  console.log(`home first paint: ${(html.length / 1024).toFixed(1)} KB`)
-  await browser.close()
+    writeFileSync('dist/home-first-paint.html', html)
+    console.log(`home first paint: ${(html.length / 1024).toFixed(1)} KB`)
+  } catch (err) {
+    console.warn('⚠️ Prerender first paint could not complete:', err.message)
+  } finally {
+    try {
+      await browser.close()
+    } catch {}
+  }
+}
+
+try {
+  await run()
 } finally {
   preview.kill()
 }

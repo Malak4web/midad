@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:laravel": "npm run build:deploy",
     "build:deploy": "vite build && node scripts/size-budget.mjs && node scripts/prerender-home.mjs && node scripts/build-deploy.mjs",
     "size": "node scripts/size-budget.mjs",
     "preview": "vite preview",

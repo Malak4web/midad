@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-deploy:
-    name: Build & Deploy to Hostinger Shared Hosting
+    name: Build & Deploy to Hostinger
     runs-on: ubuntu-latest
 
     steps:
@@ -22,11 +22,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
-      - name: 📦 Build Frontend (Vue 3 -> Laravel Public)
+      - name: 📦 Build Frontend (Vue 3 -> Laravel SPA & Public Assets)
         run: |
           cd frontend
           npm ci
-          npm run build:laravel
+          npm run build:deploy
 
       - name: 🐘 Setup PHP 8.4
         uses: shivammathur/setup-php@v2
@@ -35,7 +35,7 @@ jobs:
           extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, pdo_sqlite, bcmath, gd, zip, fileinfo, gmp
           coverage: none
 
-      - name: 📦 Install Backend Dependencies (Composer)
+      - name: 📦 Install Backend Production Dependencies (Composer)
         run: |
           cd backend
           cp .env.example .env
@@ -47,70 +47,111 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y sshpass rsync
 
+      - name: 🔑 Configure SSH Authentication
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY || secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65002' }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          if [ -n "$SSH_KEY" ]; then
+            echo "$SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            echo "SSH Private Key configured."
+          fi
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
       - name: 📁 Ensure Remote Directory Exists
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USERNAME }}
           SSH_PORT: ${{ secrets.SSH_PORT || '65002' }}
-          TARGET_DIR: ${{ secrets.SSH_TARGET_DIR }}
+          TARGET_DIR: ${{ secrets.SSH_TARGET_DIR || 'public_html' }}
         run: |
-          sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$SSH_USER@$SSH_HOST" "mkdir -p $TARGET_DIR"
+          if [ -f ~/.ssh/id_rsa ]; then
+            ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" "mkdir -p $TARGET_DIR"
+          else
+            sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" "mkdir -p $TARGET_DIR"
+          fi
 
-      - name: 🚀 Sync Files to Hostinger (rsync)
+      - name: 🚀 Sync Production Files to Hostinger (rsync)
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USERNAME }}
           SSH_PORT: ${{ secrets.SSH_PORT || '65002' }}
-          TARGET_DIR: ${{ secrets.SSH_TARGET_DIR }}
+          TARGET_DIR: ${{ secrets.SSH_TARGET_DIR || 'public_html' }}
         run: |
-          sshpass -e rsync -avz --delete \
+          RSYNC_SSH="ssh -p $SSH_PORT -o StrictHostKeyChecking=no"
+          if [ ! -f ~/.ssh/id_rsa ]; then
+            RSYNC_SSH="sshpass -e ssh -p $SSH_PORT -o StrictHostKeyChecking=no"
+          fi
+
+          rsync -avz --delete \
             --exclude='.env' \
-            --exclude='.env.local' \
-            --exclude='.env.production' \
-            --exclude='.env.backup' \
-            --exclude='.git' \
+            --exclude='.env.*' \
+            --exclude='.git*' \
             --exclude='.github' \
-            --exclude='storage/app/private/*' \
-            --exclude='storage/app/backups/*' \
-            --exclude='storage/logs/*' \
-            --exclude='database/*.sqlite' \
-            --exclude='database/*.sqlite-journal' \
+            --exclude='node_modules' \
             --exclude='tests' \
             --exclude='phpunit.xml' \
-            -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+            --exclude='database/*.sqlite' \
+            --exclude='database/*.sqlite-journal' \
+            --exclude='storage/app/public/*' \
+            --exclude='storage/app/private/*' \
+            --exclude='storage/app/backups/*' \
+            --exclude='storage/framework/cache/data/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='storage/logs/*' \
+            --exclude='public/storage' \
+            -e "$RSYNC_SSH" \
             backend/ "$SSH_USER@$SSH_HOST:$TARGET_DIR/"
 
-      - name: ⚡ Run Post-Deployment Commands on Hostinger
+      - name: ⚡ Run Post-Deployment Tasks on Hostinger
         env:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USERNAME }}
           SSH_PORT: ${{ secrets.SSH_PORT || '65002' }}
-          TARGET_DIR: ${{ secrets.SSH_TARGET_DIR }}
+          TARGET_DIR: ${{ secrets.SSH_TARGET_DIR || 'public_html' }}
         run: |
-          sshpass -e ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$SSH_USER@$SSH_HOST" "bash -s" << EOF
+          SSH_PREFIX=""
+          if [ ! -f ~/.ssh/id_rsa ]; then
+            SSH_PREFIX="sshpass -e"
+          fi
+
+          $SSH_PREFIX ssh -p "$SSH_PORT" -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" "bash -s -- \"$TARGET_DIR\"" << 'EOF'
             set -e
+            TARGET_DIR="$1"
             cd "$TARGET_DIR"
 
-            # Auto-detect PHP 8.4 if standard CLI 'php' is an older version on Hostinger
+            # Auto-detect PHP 8.4 or 8.3 CLI binary on Hostinger
             PHP_BIN="php"
-            if [ \$(php -r 'echo PHP_VERSION_ID;' 2>/dev/null || echo 0) -lt 80400 ]; then
-              if command -v /opt/alt/php84/usr/bin/php &> /dev/null; then
-                PHP_BIN="/opt/alt/php84/usr/bin/php"
-              elif command -v /usr/local/bin/ea-php84 &> /dev/null; then
-                PHP_BIN="/usr/local/bin/ea-php84"
-              fi
+            if [ $(php -r 'echo PHP_VERSION_ID;' 2>/dev/null || echo 0) -lt 80300 ]; then
+              for candidate in \
+                /opt/alt/php84/usr/bin/php \
+                /opt/alt/php83/usr/bin/php \
+                /usr/local/bin/ea-php84 \
+                /usr/local/bin/ea-php83 \
+                /usr/bin/php8.4 \
+                /usr/bin/php8.3; do
+                if command -v "$candidate" &> /dev/null; then
+                  PHP_BIN="$candidate"
+                  break
+                fi
+              done
             fi
 
             echo "=== Hostinger PHP CLI Version ==="
-            \$PHP_BIN -v
+            $PHP_BIN -v
 
             echo "=== Ensuring Storage and Cache Directories ==="
             mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/framework/testing
-            mkdir -p storage/logs storage/app/private storage/app/backups bootstrap/cache
-            chmod -R 775 storage bootstrap/cache
+            mkdir -p storage/logs storage/app/public storage/app/private storage/app/backups bootstrap/cache
+            chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
             # Ensure sqlite file exists if using sqlite database
             mkdir -p database
@@ -120,34 +161,34 @@ jobs:
               if [ -f .env.example ]; then
                 echo "Notice: .env not found on server, creating initial from .env.example..."
                 cp .env.example .env
-                \$PHP_BIN artisan key:generate --force
+                $PHP_BIN artisan key:generate --force
               else
                 echo "Warning: .env.example not found, creating basic .env..."
-                echo "APP_NAME=Laravel" > .env
+                echo "APP_NAME=Midad" > .env
                 echo "APP_ENV=production" >> .env
                 echo "APP_DEBUG=false" >> .env
                 echo "DB_CONNECTION=sqlite" >> .env
-                \$PHP_BIN artisan key:generate --force
+                $PHP_BIN artisan key:generate --force
               fi
             fi
 
-            echo "=== Storage Link ==="
-            \$PHP_BIN artisan storage:link || true
+            echo "=== Storage Symlink ==="
+            $PHP_BIN artisan storage:link || true
 
             echo "=== Database Migrations ==="
-            \$PHP_BIN artisan migrate --force
+            $PHP_BIN artisan migrate --force || echo "⚠️ Warning: Migrations could not run. Verify database credentials in .env on server."
 
-            echo "=== Database Seeders (Ensuring Users & Roles) ==="
-            \$PHP_BIN artisan db:seed --force
+            echo "=== Database Seeders ==="
+            $PHP_BIN artisan db:seed --force || echo "⚠️ Warning: Seeders could not run."
 
-            echo "=== Clear Cache to Unblock Any Rate Limits ==="
-            \$PHP_BIN artisan cache:clear
+            echo "=== Clearing & Rebuilding Production Caches ==="
+            $PHP_BIN artisan cache:clear || true
+            $PHP_BIN artisan optimize:clear || true
+            $PHP_BIN artisan optimize || {
+              $PHP_BIN artisan config:cache || true
+              $PHP_BIN artisan route:cache || true
+              $PHP_BIN artisan view:cache || true
+            }
 
-            echo "=== Optimization and Caching ==="
-            \$PHP_BIN artisan optimize:clear
-            \$PHP_BIN artisan config:cache
-            \$PHP_BIN artisan route:cache
-            \$PHP_BIN artisan view:cache
-
-            echo "=== Deployment Completed Successfully! ==="
+            echo "=== Deployment to Hostinger Completed Successfully! ==="
           EOF

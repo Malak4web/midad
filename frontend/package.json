@@ -1,0 +1,43 @@
+{
+  "name": "midad-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:deploy": "vite build && node scripts/size-budget.mjs && node scripts/prerender-home.mjs && node scripts/build-deploy.mjs",
+    "size": "node scripts/size-budget.mjs",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "format": "prettier --write src",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "shots": "node scripts/shots.mjs"
+  },
+  "dependencies": {
+    "@fontsource/amiri": "^5.3.0",
+    "@fontsource/cinzel": "^5.3.0",
+    "@fontsource/ibm-plex-sans-arabic": "^5.3.0",
+    "@fontsource/montserrat": "^5.3.0",
+    "pinia": "^3.0.4",
+    "vue": "^3.5.13",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "@vue/test-utils": "^2.4.6",
+    "eslint": "^9.39.5",
+    "eslint-plugin-vue": "^10.11.1",
+    "jsdom": "^26.1.0",
+    "pngjs": "^7.0.0",
+    "potrace": "^2.1.8",
+    "prettier": "^3.9.10",
+    "tailwindcss": "^4.3.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.7"
+  }
+}

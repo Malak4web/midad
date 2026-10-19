@@ -1,0 +1,27 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# review captures and decision mockups are working files
+.impeccable/review/
+.impeccable/mocks/
+
+# frontend
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/coverage/
+
+# backend (Laravel keeps its own .gitignore too)
+backend/.env
+backend/vendor/
+
+# build:deploy output (generated from frontend/)
+backend/resources/spa/
+backend/public/assets/
+backend/public/favicon.svg
+backend/public/og-default.png

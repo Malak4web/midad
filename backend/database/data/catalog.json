@@ -1,0 +1,1826 @@
+{
+ "categories": [
+  {
+   "slug": "men",
+   "name": "رجالي",
+   "latin": "FOR HIM"
+  },
+  {
+   "slug": "women",
+   "name": "نسائي",
+   "latin": "FOR HER"
+  },
+  {
+   "slug": "oriental",
+   "name": "شرقي ونيش",
+   "latin": "ORIENTAL & NICHE"
+  }
+ ],
+ "products": [
+  {
+   "id": 1,
+   "slug": "victory-elixir",
+   "category": "men",
+   "name": "فيكتوري إكسير",
+   "latin": "Victory Elixir",
+   "inspiredBy": "إنفيكتوس إكسير",
+   "signature": "العنبر والسويت",
+   "notes": [
+    "الفانيليا",
+    "العنبر",
+    "الخزامى",
+    "الهيل",
+    "خشب الجواياك"
+   ],
+   "pyramid": {
+    "top": [
+     "الهيل"
+    ],
+    "heart": [
+     "الخزامى"
+    ],
+    "base": [
+     "الفانيليا",
+     "العنبر",
+     "خشب الجواياك"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "slug": "together-intense",
+   "category": "men",
+   "name": "توجيذر إنتنس",
+   "latin": "Together Intense",
+   "inspiredBy": "سترونجر ويذ يو إنتنس",
+   "signature": "البندق المكرمل",
+   "notes": [
+    "التوفي",
+    "الفانيليا",
+    "القرفة",
+    "العنبر",
+    "الفلفل الوردي",
+    "الميرمية"
+   ],
+   "pyramid": {
+    "top": [
+     "الفلفل الوردي",
+     "الميرمية"
+    ],
+    "heart": [
+     "التوفي",
+     "القرفة"
+    ],
+    "base": [
+     "الفانيليا",
+     "العنبر"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "slug": "wanted-night",
+   "category": "men",
+   "name": "وانتد نايت",
+   "latin": "Wanted Night",
+   "inspiredBy": "أزارو وانتد",
+   "signature": "الهيل والليمون",
+   "notes": [
+    "الهيل",
+    "الليمون",
+    "الزنجبيل",
+    "التونكا",
+    "نجيل الهند"
+   ],
+   "pyramid": {
+    "top": [
+     "الهيل",
+     "الليمون"
+    ],
+    "heart": [
+     "الزنجبيل"
+    ],
+    "base": [
+     "التونكا",
+     "نجيل الهند"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "slug": "bleu-royale",
+   "category": "men",
+   "name": "بلو رويال",
+   "latin": "Bleu Royale",
+   "inspiredBy": "بلو دي شانيل",
+   "signature": "الحمضيات والأرز",
+   "notes": [
+    "الأخشاب العطرية",
+    "الجريب فروت",
+    "البخور",
+    "الصندل",
+    "الزنجبيل"
+   ],
+   "pyramid": {
+    "top": [
+     "الجريب فروت"
+    ],
+    "heart": [
+     "الزنجبيل"
+    ],
+    "base": [
+     "الأخشاب العطرية",
+     "البخور",
+     "الصندل"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 0
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "slug": "ocean-wave",
+   "category": "men",
+   "name": "أوشن ويف",
+   "latin": "Ocean Wave",
+   "inspiredBy": "أكوا دي جيو",
+   "signature": "الانتعاش البحري",
+   "notes": [
+    "النوتات البحرية",
+    "الجريب فروت",
+    "الياسمين",
+    "الأرز",
+    "المسك"
+   ],
+   "pyramid": {
+    "top": [
+     "النوتات البحرية",
+     "الجريب فروت"
+    ],
+    "heart": [
+     "الياسمين"
+    ],
+    "base": [
+     "الأرز",
+     "المسك"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "slug": "ultra-passion",
+   "category": "men",
+   "name": "ألترا باشن",
+   "latin": "Ultra Passion",
+   "inspiredBy": "ألترا ميل",
+   "signature": "الكمثرى والفانيليا",
+   "notes": [
+    "الكمثرى",
+    "الفانيليا",
+    "القرفة",
+    "اللافندر",
+    "النعناع",
+    "العنبر"
+   ],
+   "pyramid": {
+    "top": [
+     "الكمثرى",
+     "النعناع"
+    ],
+    "heart": [
+     "القرفة",
+     "اللافندر"
+    ],
+    "base": [
+     "الفانيليا",
+     "العنبر"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "slug": "absolute-scandal",
+   "category": "men",
+   "name": "أبسولوت سكاندل",
+   "latin": "Absolute Scandal",
+   "inspiredBy": "سكاندل رجالي",
+   "signature": "الكراميل الدافئ",
+   "notes": [
+    "الكراميل",
+    "التونكا",
+    "الميرمية",
+    "اللافندر",
+    "المندرين"
+   ],
+   "pyramid": {
+    "top": [
+     "الميرمية",
+     "المندرين"
+    ],
+    "heart": [
+     "الكراميل",
+     "اللافندر"
+    ],
+    "base": [
+     "التونكا"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "slug": "aventus-legend",
+   "category": "men",
+   "name": "أفنتوس ليجند",
+   "latin": "Aventus Legend",
+   "inspiredBy": "كريد أفنتوس",
+   "signature": "الأناناس المدخّن",
+   "notes": [
+    "الأناناس",
+    "البتولا المدخّن",
+    "التفاح الأخضر",
+    "المسك",
+    "الكشمش"
+   ],
+   "pyramid": {
+    "top": [
+     "الأناناس",
+     "التفاح الأخضر"
+    ],
+    "heart": [
+     "الكشمش"
+    ],
+    "base": [
+     "البتولا المدخّن",
+     "المسك"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "slug": "elixir-male",
+   "category": "men",
+   "name": "إكسير مال",
+   "latin": "Elixir Male",
+   "inspiredBy": "لومال إكسير",
+   "signature": "العسل واللافندر",
+   "notes": [
+    "العسل",
+    "الفانيليا",
+    "اللافندر",
+    "الجاوي",
+    "التونكا"
+   ],
+   "pyramid": {
+    "top": [
+     "العسل"
+    ],
+    "heart": [
+     "اللافندر"
+    ],
+    "base": [
+     "الفانيليا",
+     "الجاوي",
+     "التونكا"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "slug": "roma-velvet",
+   "category": "men",
+   "name": "روما فيلفت",
+   "latin": "Roma Velvet",
+   "inspiredBy": "فالنتينو بورن إن روما",
+   "signature": "الفانيليا والعنبر",
+   "notes": [
+    "الفانيليا",
+    "اللافندر",
+    "نجيل الهند",
+    "الأخشاب العنبرية"
+   ],
+   "pyramid": {
+    "top": [
+     "اللافندر"
+    ],
+    "heart": [
+     "الفانيليا"
+    ],
+    "base": [
+     "نجيل الهند",
+     "الأخشاب العنبرية"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "slug": "her-blossom",
+   "category": "women",
+   "name": "هير بلوسوم",
+   "latin": "Her Blossom",
+   "inspiredBy": "بربري هير",
+   "signature": "الفراولة والتوت",
+   "notes": [
+    "الفراولة",
+    "التوت الأسود",
+    "الكرز",
+    "المسك",
+    "العنبر",
+    "الياسمين"
+   ],
+   "pyramid": {
+    "top": [
+     "الفراولة",
+     "التوت الأسود",
+     "الكرز"
+    ],
+    "heart": [
+     "الياسمين"
+    ],
+    "base": [
+     "المسك",
+     "العنبر"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 0
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "slug": "sweet-scandal",
+   "category": "women",
+   "name": "سويت سكاندل",
+   "latin": "Sweet Scandal",
+   "inspiredBy": "سكاندل نسائي",
+   "signature": "العسل الفاخر",
+   "notes": [
+    "العسل",
+    "زهر البرتقال",
+    "الغاردينيا",
+    "الكراميل",
+    "الباتشولي"
+   ],
+   "pyramid": {
+    "top": [
+     "العسل"
+    ],
+    "heart": [
+     "زهر البرتقال",
+     "الغاردينيا",
+     "الكراميل"
+    ],
+    "base": [
+     "الباتشولي"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "slug": "white-cream",
+   "category": "women",
+   "name": "وايت كريم",
+   "latin": "White Cream",
+   "inspiredBy": "بيانكو لاتيه",
+   "signature": "الحليب والفانيليا",
+   "notes": [
+    "الحليب",
+    "الكراميل",
+    "الفانيليا",
+    "الكومارين",
+    "المسك الأبيض"
+   ],
+   "pyramid": {
+    "top": [
+     "الحليب"
+    ],
+    "heart": [
+     "الكراميل"
+    ],
+    "base": [
+     "الفانيليا",
+     "الكومارين",
+     "المسك الأبيض"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 14,
+   "slug": "marshmallow-cloud",
+   "category": "women",
+   "name": "مارشميلو كلاود",
+   "latin": "Marshmallow Cloud",
+   "inspiredBy": "مارشميلو",
+   "signature": "الحلوى والمارشميلو",
+   "notes": [
+    "المارشميلو",
+    "السكر المكرمل",
+    "الفانيليا",
+    "مسك الروم"
+   ],
+   "pyramid": {
+    "top": [
+     "المارشميلو"
+    ],
+    "heart": [
+     "السكر المكرمل"
+    ],
+    "base": [
+     "الفانيليا",
+     "مسك الروم"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 15,
+   "slug": "heavenly-love",
+   "category": "women",
+   "name": "هيفنلي لوف",
+   "latin": "Heavenly Love",
+   "inspiredBy": "لاف إز هيفنلي",
+   "signature": "الأزهار الناعمة",
+   "notes": [
+    "أزهار الكرز",
+    "التوت الأبيض",
+    "المسك الوردي",
+    "الفريزيا"
+   ],
+   "pyramid": {
+    "top": [
+     "أزهار الكرز",
+     "التوت الأبيض"
+    ],
+    "heart": [
+     "الفريزيا"
+    ],
+    "base": [
+     "المسك الوردي"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 16,
+   "slug": "lady-rose",
+   "category": "women",
+   "name": "ليدي روز",
+   "latin": "Lady Rose",
+   "inspiredBy": "ميس ديور",
+   "signature": "الورد الجوري",
+   "notes": [
+    "الورد الجوري",
+    "زنبق الوادي",
+    "الفاوانيا",
+    "السوسن",
+    "الباتشولي"
+   ],
+   "pyramid": {
+    "top": [
+     "الورد الجوري"
+    ],
+    "heart": [
+     "زنبق الوادي",
+     "الفاوانيا",
+     "السوسن"
+    ],
+    "base": [
+     "الباتشولي"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 17,
+   "slug": "paris-glow",
+   "category": "women",
+   "name": "باريس جلو",
+   "latin": "Paris Glow",
+   "inspiredBy": "باريس هيلتون",
+   "signature": "التفاح والفواكه",
+   "notes": [
+    "التفاح الأخضر",
+    "الخوخ",
+    "الفريزيا",
+    "الصندل",
+    "الميموزا"
+   ],
+   "pyramid": {
+    "top": [
+     "التفاح الأخضر",
+     "الخوخ"
+    ],
+    "heart": [
+     "الفريزيا",
+     "الميموزا"
+    ],
+    "base": [
+     "الصندل"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 18,
+   "slug": "cavalli-gold",
+   "category": "women",
+   "name": "كافالي جولد",
+   "latin": "Cavalli Gold",
+   "inspiredBy": "روبيرتو كافالي",
+   "signature": "زهر البرتقال الشرقي",
+   "notes": [
+    "زهر البرتقال",
+    "الفانيليا",
+    "الجاوي",
+    "التونكا"
+   ],
+   "pyramid": {
+    "top": [
+     "زهر البرتقال"
+    ],
+    "heart": [
+     "الفانيليا"
+    ],
+    "base": [
+     "الجاوي",
+     "التونكا"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 0
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 19,
+   "slug": "freedom-aura",
+   "category": "women",
+   "name": "فريدم أورا",
+   "latin": "Freedom Aura",
+   "inspiredBy": "ليبر",
+   "signature": "اللافندر الأنثوي",
+   "notes": [
+    "اللافندر",
+    "زهر البرتقال",
+    "الفانيليا",
+    "المندرين",
+    "العنبر"
+   ],
+   "pyramid": {
+    "top": [
+     "المندرين"
+    ],
+    "heart": [
+     "اللافندر",
+     "زهر البرتقال"
+    ],
+    "base": [
+     "الفانيليا",
+     "العنبر"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 20,
+   "slug": "sugar-bloom",
+   "category": "women",
+   "name": "شوجر بلوم",
+   "latin": "Sugar Bloom",
+   "inspiredBy": "تاسي شوجر",
+   "signature": "السكر والفواكه",
+   "notes": [
+    "السكر الناعم",
+    "التوت",
+    "الفانيليا",
+    "غزل البنات",
+    "المسك"
+   ],
+   "pyramid": {
+    "top": [
+     "التوت"
+    ],
+    "heart": [
+     "السكر الناعم",
+     "غزل البنات"
+    ],
+    "base": [
+     "الفانيليا",
+     "المسك"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 350,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 650,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 950,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1450,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 21,
+   "slug": "madawi-royale",
+   "category": "oriental",
+   "name": "مضاوي رويال",
+   "latin": "Madawi Royale",
+   "inspiredBy": "مضاوي",
+   "signature": "الباتشولي والورد",
+   "notes": [
+    "أزهار الخوخ",
+    "أزهار التفاح",
+    "الباتشولي",
+    "الأناناس",
+    "المسك"
+   ],
+   "pyramid": {
+    "top": [
+     "أزهار الخوخ",
+     "أزهار التفاح"
+    ],
+    "heart": [
+     "الأناناس"
+    ],
+    "base": [
+     "الباتشولي",
+     "المسك"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 400,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 750,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 1050,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1550,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 22,
+   "slug": "the-rebel-oud",
+   "category": "oriental",
+   "name": "ذا ريبل عود",
+   "latin": "The Rebel Oud",
+   "inspiredBy": "الثائر",
+   "signature": "العود والأخشاب",
+   "notes": [
+    "العود",
+    "البخور",
+    "الجلود",
+    "العنبر",
+    "الهيل"
+   ],
+   "pyramid": {
+    "top": [
+     "الهيل"
+    ],
+    "heart": [
+     "العود"
+    ],
+    "base": [
+     "البخور",
+     "الجلود",
+     "العنبر"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 400,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 750,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 1050,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1550,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 23,
+   "slug": "qahwa-fusion",
+   "category": "oriental",
+   "name": "قهوة فيوجن",
+   "latin": "Qahwa Fusion",
+   "inspiredBy": "خمرة قهوة",
+   "signature": "القرفة والقهوة",
+   "notes": [
+    "القهوة",
+    "القرفة",
+    "الجوز",
+    "التونكا",
+    "الفانيليا"
+   ],
+   "pyramid": {
+    "top": [
+     "القهوة"
+    ],
+    "heart": [
+     "القرفة",
+     "الجوز"
+    ],
+    "base": [
+     "التونكا",
+     "الفانيليا"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 400,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 750,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 1050,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1550,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 24,
+   "slug": "black-oud-velvet",
+   "category": "oriental",
+   "name": "بلاك عود فيلفت",
+   "latin": "Black Oud Velvet",
+   "inspiredBy": "بلاك أفغانو",
+   "signature": "البخور والتبغ",
+   "notes": [
+    "الراتنجات",
+    "البخور",
+    "التبغ",
+    "العود",
+    "الأخشاب"
+   ],
+   "pyramid": {
+    "top": [
+     "التبغ"
+    ],
+    "heart": [
+     "الراتنجات"
+    ],
+    "base": [
+     "البخور",
+     "العود",
+     "الأخشاب"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 400,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 750,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 1050,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1550,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 25,
+   "slug": "royal-valley",
+   "category": "oriental",
+   "name": "رويال فالي",
+   "latin": "Royal Valley",
+   "inspiredBy": "إمبريال فالي",
+   "signature": "الجلود والعنبر",
+   "notes": [
+    "العنبر",
+    "الجلود",
+    "الدافانا",
+    "البرغموت",
+    "الباتشولي"
+   ],
+   "pyramid": {
+    "top": [
+     "البرغموت"
+    ],
+    "heart": [
+     "الدافانا"
+    ],
+    "base": [
+     "العنبر",
+     "الجلود",
+     "الباتشولي"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 400,
+     "stock": 0
+    },
+    {
+     "ml": 30,
+     "price": 750,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 1050,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1550,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 26,
+   "slug": "pure-amber-fruit",
+   "category": "oriental",
+   "name": "بيور أمبر فروت",
+   "latin": "Pure Amber Fruit",
+   "inspiredBy": "أربا بيورا",
+   "signature": "الفواكه والمسك",
+   "notes": [
+    "البرتقال الصقلي",
+    "الليمون",
+    "المانجو",
+    "المسك الأبيض"
+   ],
+   "pyramid": {
+    "top": [
+     "البرتقال الصقلي",
+     "الليمون"
+    ],
+    "heart": [
+     "المانجو"
+    ],
+    "base": [
+     "المسك الأبيض"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 400,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 750,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 1050,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1550,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 27,
+   "slug": "ehsas-pure",
+   "category": "oriental",
+   "name": "إحساس بيور",
+   "latin": "Ehsas Pure",
+   "inspiredBy": "إحساس",
+   "signature": "الزهور والمسك",
+   "notes": [
+    "الورد الاستوائي",
+    "المسك الأبيض",
+    "العنبر",
+    "الحمضيات"
+   ],
+   "pyramid": {
+    "top": [
+     "الحمضيات"
+    ],
+    "heart": [
+     "الورد الاستوائي"
+    ],
+    "base": [
+     "المسك الأبيض",
+     "العنبر"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 400,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 750,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 1050,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1550,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 28,
+   "slug": "stellar-amber",
+   "category": "oriental",
+   "name": "ستيلار أمبر",
+   "latin": "Stellar Amber",
+   "inspiredBy": "ستيلر تايمز",
+   "signature": "العنبر الفاخر",
+   "notes": [
+    "العنبر الشفاف",
+    "زهر البرتقال",
+    "النباتات العطرية",
+    "المسك"
+   ],
+   "pyramid": {
+    "top": [
+     "زهر البرتقال"
+    ],
+    "heart": [
+     "النباتات العطرية"
+    ],
+    "base": [
+     "العنبر الشفاف",
+     "المسك"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 400,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 750,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 1050,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1550,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 29,
+   "slug": "symphony-breeze",
+   "category": "oriental",
+   "name": "سيمفوني بريز",
+   "latin": "Symphony Breeze",
+   "inspiredBy": "سيمفوني",
+   "signature": "الجريب فروت الفوّار",
+   "notes": [
+    "الجريب فروت",
+    "الزنجبيل",
+    "البرغموت",
+    "الأخشاب"
+   ],
+   "pyramid": {
+    "top": [
+     "الجريب فروت",
+     "الزنجبيل"
+    ],
+    "heart": [
+     "البرغموت"
+    ],
+    "base": [
+     "الأخشاب"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 400,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 750,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 1050,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1550,
+     "stock": 20
+    }
+   ]
+  },
+  {
+   "id": 30,
+   "slug": "deep-ocean",
+   "category": "oriental",
+   "name": "ديب أوشن",
+   "latin": "Deep Ocean",
+   "inspiredBy": "ميجامير",
+   "signature": "الانتعاش البحري الثقيل",
+   "notes": [
+    "الملح البحري",
+    "الطحالب",
+    "العنبر",
+    "الأخشاب المائية"
+   ],
+   "pyramid": {
+    "top": [
+     "الملح البحري"
+    ],
+    "heart": [
+     "الطحالب"
+    ],
+    "base": [
+     "العنبر",
+     "الأخشاب المائية"
+    ]
+   },
+   "concentration": "EAU DE PARFUM",
+   "variants": [
+    {
+     "ml": 10,
+     "price": 400,
+     "stock": 20
+    },
+    {
+     "ml": 30,
+     "price": 750,
+     "stock": 20
+    },
+    {
+     "ml": 50,
+     "price": 1050,
+     "stock": 20
+    },
+    {
+     "ml": 100,
+     "price": 1550,
+     "stock": 20
+    }
+   ]
+  }
+ ],
+ "spotlights": {
+  "men": {
+   "sample": true,
+   "product": "victory-elixir",
+   "tagline": "دفءُ العنبر، وحلاوةُ الفانيليا، وهيلٌ يوقظ البداية.",
+   "palette": {
+    "bg": "#4A2A14",
+    "surface": "#5C361B",
+    "fg": "#F7E9D2",
+    "muted": "#D9BF9A",
+    "accent": "#E8AE5C"
+   },
+   "texture": "resin",
+   "ingredients": [
+    "vanilla",
+    "amber",
+    "lavender",
+    "cardamom"
+   ],
+   "pyramid": {
+    "top": [
+     "الهيل",
+     "الخزامى"
+    ],
+    "heart": [
+     "العنبر"
+    ],
+    "base": [
+     "الفانيليا",
+     "خشب الجواياك"
+    ]
+   }
+  },
+  "women": {
+   "sample": true,
+   "product": "her-blossom",
+   "tagline": "فراولةٌ وتوتٌ أسود، يهدآن على مسكٍ ناعم.",
+   "palette": {
+    "bg": "#F3D8DA",
+    "surface": "#FAEAEA",
+    "fg": "#3E1621",
+    "muted": "#7A4553",
+    "accent": "#A8324E"
+   },
+   "texture": "petals",
+   "ingredients": [
+    "strawberry",
+    "blackberry",
+    "jasmine",
+    "musk"
+   ],
+   "pyramid": {
+    "top": [
+     "الفراولة",
+     "الكرز"
+    ],
+    "heart": [
+     "التوت الأسود",
+     "الياسمين"
+    ],
+    "base": [
+     "المسك",
+     "العنبر"
+    ]
+   }
+  },
+  "oriental": {
+   "sample": true,
+   "product": "black-oud-velvet",
+   "tagline": "بخورٌ وتبغٌ وعود، يكتبون أثراً للمساء.",
+   "palette": {
+    "bg": "#15110F",
+    "surface": "#221B17",
+    "fg": "#EFE4D1",
+    "muted": "#A9997F",
+    "accent": "#C99A5B"
+   },
+   "texture": "smoke",
+   "ingredients": [
+    "incense",
+    "tobacco",
+    "oud",
+    "resin"
+   ],
+   "pyramid": {
+    "top": [
+     "البخور",
+     "الراتنجات"
+    ],
+    "heart": [
+     "التبغ",
+     "العود"
+    ],
+    "base": [
+     "الأخشاب"
+    ]
+   }
+  }
+ },
+ "finder": [
+  {
+   "key": "who",
+   "q": "لمن تختار؟",
+   "options": [
+    {
+     "v": "me",
+     "label": "لنفسي"
+    },
+    {
+     "v": "her",
+     "label": "هدية لها",
+     "weight": {
+      "cat": {
+       "women": 3,
+       "oriental": 1
+      }
+     }
+    },
+    {
+     "v": "him",
+     "label": "هدية له",
+     "weight": {
+      "cat": {
+       "men": 3,
+       "oriental": 1
+      }
+     }
+    }
+   ]
+  },
+  {
+   "key": "when",
+   "q": "متى ستضعه غالباً؟",
+   "options": [
+    {
+     "v": "day",
+     "label": "النهار والعمل",
+     "weight": {
+      "notes": [
+       "الجريب فروت",
+       "الليمون",
+       "البحرية",
+       "البرغموت",
+       "الزنجبيل",
+       "التفاح",
+       "المندرين"
+      ]
+     }
+    },
+    {
+     "v": "night",
+     "label": "المساء والسهرات",
+     "weight": {
+      "notes": [
+       "العود",
+       "البخور",
+       "التبغ",
+       "العنبر",
+       "الفانيليا",
+       "الجلود"
+      ]
+     }
+    },
+    {
+     "v": "events",
+     "label": "المناسبات",
+     "weight": {
+      "notes": [
+       "العنبر",
+       "العود",
+       "الورد",
+       "زهر البرتقال",
+       "العسل"
+      ]
+     }
+    },
+    {
+     "v": "daily",
+     "label": "كل يوم",
+     "weight": {
+      "notes": [
+       "المسك",
+       "اللافندر",
+       "الفانيليا",
+       "الياسمين"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "key": "mood",
+   "q": "أي أثرٍ تحب؟",
+   "options": [
+    {
+     "v": "sweet",
+     "label": "دافئ وحلو",
+     "weight": {
+      "notes": [
+       "الفانيليا",
+       "الكراميل",
+       "التوفي",
+       "العسل",
+       "السكر",
+       "التونكا",
+       "المارشميلو",
+       "الحليب"
+      ]
+     }
+    },
+    {
+     "v": "floral",
+     "label": "زهري وناعم",
+     "weight": {
+      "notes": [
+       "الورد",
+       "الياسمين",
+       "زهر",
+       "الفريزيا",
+       "الفاوانيا",
+       "أزهار",
+       "التوت"
+      ]
+     }
+    },
+    {
+     "v": "oud",
+     "label": "عود وبخور",
+     "weight": {
+      "notes": [
+       "العود",
+       "البخور",
+       "التبغ",
+       "الجلود",
+       "الراتنجات",
+       "العنبر"
+      ]
+     }
+    },
+    {
+     "v": "fresh",
+     "label": "منعش وبحري",
+     "weight": {
+      "notes": [
+       "البحرية",
+       "الملح",
+       "الجريب فروت",
+       "الليمون",
+       "الزنجبيل",
+       "البرغموت",
+       "الحمضيات"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

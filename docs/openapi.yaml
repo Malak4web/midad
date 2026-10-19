@@ -1,0 +1,3284 @@
+openapi: 3.1.0
+info:
+  title: Midad API
+  version: 1.0.0
+  summary: Storefront and admin JSON API for Midad, an Arabic-first perfume store in Egypt.
+  description: |
+    Hand-written reference for the Laravel backend (`backend/routes/api.php`). Every path below is
+    relative to the `/api` server prefix.
+
+    ## Authentication (Sanctum SPA cookies)
+    The API is stateful (`$middleware->statefulApi()` in `bootstrap/app.php`); there are no bearer tokens.
+
+    1. `GET /sanctum/csrf-cookie` (outside `/api`) sets the `XSRF-TOKEN` cookie.
+    2. Every non-GET request from the SPA sends the cookie's value back in the `X-XSRF-TOKEN` header
+       (axios does this automatically). A missing or stale token returns **419**.
+    3. `POST /auth/login` or `POST /auth/register` starts the session (`midad-session` cookie, http-only,
+       SameSite=Lax). Logging in or registering merges the guest cart into the account cart.
+
+    Guests get a cart through an encrypted, http-only `midad_cart` cookie (30 days, SameSite=Lax) that holds
+    an opaque cart token. Signed-in users' carts are tied to the account, and the cookie is cleared on login.
+
+    ## Roles
+    `customer`, `staff`, `admin`. Every `/admin/*` route requires `auth:sanctum` plus the `can:staff` gate
+    (staff or admin). Operations marked **admin only** also pass the `can:admin` gate. Each admin operation carries
+    an `x-required-role` extension (`staff` or `admin`). Successful admin writes are recorded in the
+    admin activity log (`LogAdminActivity`).
+
+    ## Money
+    Storage is integer piasters (1 EGP = 100 piasters). The API speaks **Egyptian pounds** as JSON numbers
+    (`App\Support\Money::egp`): whole amounts come out as integers (`450`), fractional ones rounded to
+    2 decimals (`449.5`). Inputs are pounds too and are converted with `Money::piasters` (rounded to the piaster).
+    The one exception is `GET/POST/PUT /account/addresses`, which return raw models (see the Address schema).
+
+    ## Errors
+    API errors are JSON `{message, errors?}` with Arabic messages (`bootstrap/app.php`):
+
+    | Status | When | message |
+    |---|---|---|
+    | 401 | not signed in | `سجّل الدخول أولاً.` |
+    | 403 | gate/policy denied | `ليس لديك صلاحية لهذا الإجراء.` |
+    | 404 | model or route not found, or a wrong order/phone pair | `غير موجود.` |
+    | 419 | CSRF token missing or expired. **Not localized**: Laravel's default `CSRF token mismatch.` | |
+    | 422 | validation; `errors` maps field -> list of Arabic messages | `راجع البيانات المكتوبة.` |
+    | 429 | rate limit hit | `محاولات كثيرة. انتظر قليلاً ثم حاول مرة أخرى.` |
+
+    ## Rate limits
+    Named throttles from `routes/api.php` and `AppServiceProvider`. Each limit is keyed by the signed-in user id,
+    or by the client IP for guests, unless stated otherwise:
+    catalog 120/min · search +60/min · finder result +30/min · cart 120/min · coupon +10/min ·
+    login (5/min per email+IP **and** 20/min per IP) · auth-mail 3/min per email+IP · verify 6/min ·
+    checkout `CHECKOUT_PER_MINUTE` (default 10)/min · order lookup 30/min · pay 10/min · sandbox 20/min · admin 300/min.
+
+    ## Non-API routes (routes/web.php)
+    `GET /sitemap.xml`, `GET /robots.txt`, and `GET /{path}` (the SPA HTML shell with per-page meta for every path
+    except `api/`, `sanctum/`, `storage/`, `up`). `GET /up` is the health check. These are not JSON and are not described below.
+servers:
+  - url: /api
+    description: API prefix (same origin as the SPA)
+tags:
+  - name: Catalog
+    description: Public storefront catalog, search, finder quiz and shipping zones.
+  - name: Auth
+    description: Session auth, registration, password reset, email verification, profile.
+  - name: Cart
+    description: Server-priced cart for guests (cookie) or signed-in customers.
+  - name: Checkout & Orders
+    description: Placing orders and looking them up.
+  - name: Payments
+    description: Paymob callback and the local fake-gateway sandbox.
+  - name: Account
+    description: Signed-in customer's orders and saved addresses.
+  - name: 'Admin: Products'
+  - name: 'Admin: Orders'
+  - name: 'Admin: Store'
+    description: Categories, spotlights, shipping rates, settings and finder weights.
+  - name: 'Admin: Coupons'
+  - name: 'Admin: Customers'
+  - name: 'Admin: Reports'
+
+paths:
+  # ─────────────────────────────── Sanctum (outside /api)
+  /sanctum/csrf-cookie:
+    servers:
+      - url: /
+        description: Site root (this route is not under /api)
+    get:
+      tags: [Auth]
+      operationId: csrfCookie
+      summary: Get the XSRF-TOKEN cookie
+      description: Sanctum route. Sets the `XSRF-TOKEN` cookie (and the session cookie). Call it once before the first non-GET request.
+      security: []
+      responses:
+        '204':
+          description: Cookie set.
+          headers:
+            Set-Cookie:
+              schema: {type: string}
+              description: '`XSRF-TOKEN=...; midad-session=...`'
+
+  # ─────────────────────────────── Catalog
+  /home:
+    get:
+      tags: [Catalog]
+      operationId: getHome
+      summary: Home page payload
+      description: |
+        Announcements, discovery box pricing, and one section per active category (its spotlight, the palette, and the other products).
+        Cached for 10 minutes and invalidated by admin writes. The same payload is embedded in the HTML shell of `/`.
+        Rate limit: catalog 120/min.
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/Home'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /categories:
+    get:
+      tags: [Catalog]
+      operationId: listCategories
+      summary: Active categories with product counts
+      description: 'Rate limit: catalog 120/min.'
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/Category'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /categories/{slug}:
+    get:
+      tags: [Catalog]
+      operationId: getCategory
+      summary: Products in one category (paginated, filterable)
+      description: 'Takes the same filters as `GET /products` (the `category` query param is overridden by the path). Returns 404 for unknown or inactive categories. Rate limit: catalog 120/min.'
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: {type: string}
+          example: oriental
+        - $ref: '#/components/parameters/NoteFilter'
+        - $ref: '#/components/parameters/SizeFilter'
+        - $ref: '#/components/parameters/PriceMin'
+        - $ref: '#/components/parameters/PriceMax'
+        - $ref: '#/components/parameters/ProductSort'
+        - $ref: '#/components/parameters/CatalogPerPage'
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200':
+          description: OK. Laravel resource pagination; `meta.category` is added to the paginator meta.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ProductPage'
+                  - type: object
+                    properties:
+                      meta:
+                        type: object
+                        properties:
+                          category: {$ref: '#/components/schemas/Category'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /products:
+    get:
+      tags: [Catalog]
+      operationId: listProducts
+      summary: Browse active products (paginated, filterable)
+      description: 'Filters come from `ProductQuery::rules()`. Price filters match any active variant within the range. Rate limit: catalog 120/min.'
+      security: []
+      parameters:
+        - name: category
+          in: query
+          schema: {type: string, maxLength: 64}
+          description: Category slug.
+        - $ref: '#/components/parameters/NoteFilter'
+        - $ref: '#/components/parameters/SizeFilter'
+        - $ref: '#/components/parameters/PriceMin'
+        - $ref: '#/components/parameters/PriceMax'
+        - $ref: '#/components/parameters/ProductSort'
+        - $ref: '#/components/parameters/CatalogPerPage'
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProductPage'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /products/{slug}:
+    get:
+      tags: [Catalog]
+      operationId: getProduct
+      summary: Product detail with up to 4 similar products
+      description: '"Similar" ranks other products by the most shared notes, then by same category. Rate limit: catalog 120/min.'
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: {$ref: '#/components/schemas/ProductDetail'}
+                  meta:
+                    type: object
+                    properties:
+                      similar:
+                        type: array
+                        maxItems: 4
+                        items: {$ref: '#/components/schemas/Product'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /search:
+    get:
+      tags: [Catalog]
+      operationId: searchProducts
+      summary: Search products
+      description: 'Arabic-normalized search over the Midad name, the Latin name, the original perfume, and the signature note (MySQL FULLTEXT plus a LIKE pass). Not paginated. Rate limits: catalog 120/min and search 60/min.'
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 80}
+          example: عود
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 24, default: 24}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/Product'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /notes:
+    get:
+      tags: [Catalog]
+      operationId: listNotes
+      summary: Fragrance notes used by at least one active product
+      description: 'Sorted by product count (descending), then name. Rate limit: catalog 120/min.'
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/Note'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /finder/questions:
+    get:
+      tags: [Catalog]
+      operationId: listFinderQuestions
+      summary: Scent finder quiz questions
+      description: 'Rate limit: catalog 120/min.'
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/FinderQuestion'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /finder/result:
+    post:
+      tags: [Catalog]
+      operationId: finderResult
+      summary: Recommend products from quiz answers
+      description: 'Rate limits: catalog 120/min and finder 30/min. Requires the X-XSRF-TOKEN header when called from the SPA.'
+      security:
+        - xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              properties:
+                answers:
+                  type: object
+                  description: Question key -> chosen option value (`v`). At most 10 entries.
+                  maxProperties: 10
+                  additionalProperties: {type: string, maxLength: 32}
+                  example: {mood: warm, time: night}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/FinderResult'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /governorates:
+    get:
+      tags: [Catalog]
+      operationId: listGovernorates
+      summary: Active shipping governorates with fees and delivery days
+      description: 'Rate limit: catalog 120/min.'
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/Governorate'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  # ─────────────────────────────── Auth
+  /auth/me:
+    get:
+      tags: [Auth]
+      operationId: me
+      summary: Current user (or null)
+      description: Never returns 401. `data` is null for guests. No rate limit.
+      security:
+        - {}
+        - sessionCookie: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: '#/components/schemas/User'
+                      - type: 'null'
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      operationId: register
+      summary: Create a customer account and sign in
+      description: |
+        Signs the new user in (remember-me on), regenerates the session, merges the guest cart into the account,
+        clears the `midad_cart` cookie, and sends the verification email. Rate limit: login (5/min per email+IP, 20/min per IP).
+      security:
+        - xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, phone, password, password_confirmation]
+              properties:
+                name: {type: string, maxLength: 120, example: سارة أحمد}
+                email: {type: string, format: email, maxLength: 190, description: 'RFC email, unique, stored lowercase.'}
+                phone: {$ref: '#/components/schemas/PhoneInput'}
+                password: {$ref: '#/components/schemas/PasswordInput'}
+                password_confirmation: {type: string}
+      responses:
+        '201':
+          description: Created and signed in.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/User'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Sign in
+      description: |
+        Bad credentials return 422 with `errors.email = ["البريد الإلكتروني أو كلمة المرور غير صحيحة."]`.
+        On success, regenerates the session, merges the guest cart, and clears `midad_cart`.
+        Rate limit: login (5/min per email+IP, 20/min per IP).
+      security:
+        - xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string}
+                remember: {type: boolean, default: true}
+      responses:
+        '200':
+          description: Signed in.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/User'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Sign out
+      description: Invalidates the session and regenerates the CSRF token. No rate limit.
+      security:
+        - sessionCookie: []
+          xsrfHeader: []
+      responses:
+        '204': {description: Signed out.}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      operationId: forgotPassword
+      summary: Send a password reset link
+      description: |
+        Returns the same answer whether or not the email exists, so accounts can't be enumerated. The emailed link points to
+        `{FRONTEND_URL}/reset-password?token=...&email=...`. Rate limit: auth-mail (3/min per email+IP).
+      security:
+        - xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Message'}
+              example: {message: أرسلنا رابط تغيير كلمة المرور إلى بريدك إن كان مسجلاً لدينا.}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      operationId: resetPassword
+      summary: Set a new password with a reset token
+      description: 'An invalid or expired token returns 422 with an `errors.email` message. Rate limit: login (5/min per email+IP, 20/min per IP).'
+      security:
+        - xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, email, password, password_confirmation]
+              properties:
+                token: {type: string}
+                email: {type: string, format: email}
+                password: {$ref: '#/components/schemas/PasswordInput'}
+                password_confirmation: {type: string}
+      responses:
+        '200':
+          description: Password changed.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Message'}
+              example: {message: تم تغيير كلمة المرور.}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /auth/verify-email/{id}/{hash}:
+    get:
+      tags: [Auth]
+      operationId: verifyEmail
+      summary: Confirm an email address (signed link)
+      description: |
+        A relative signed URL (`signed:relative`) valid for 24 hours. The email links to `{FRONTEND_URL}/verify-email?url=<this path>`, and the SPA calls it.
+        `hash` is `sha1(email)`. A bad signature or hash returns 403 with a **non-localized** framework message (these are plain
+        HttpExceptions, which the Arabic 403 renderer does not catch). Idempotent. Rate limit: verify 6/min.
+      security: []
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer}}
+        - {name: hash, in: path, required: true, schema: {type: string, pattern: '^[0-9a-f]{40}$'}}
+        - {name: expires, in: query, required: true, schema: {type: integer}, description: Unix timestamp added by the signer.}
+        - {name: signature, in: query, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Verified (or already verified).
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Message'}
+              example: {message: تم تأكيد بريدك الإلكتروني.}
+        '403':
+          description: Invalid or expired signature, or a hash mismatch. The message is not in Arabic.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {message: Invalid signature.}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /auth/verify-email/resend:
+    post:
+      tags: [Auth]
+      operationId: resendVerification
+      summary: Resend the verification email
+      description: 'No-op when already verified (same 200 response). Rate limit: auth-mail (3/min, keyed by the `email` input + IP; the body is usually empty, so effectively per IP).'
+      security:
+        - sessionCookie: []
+          xsrfHeader: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Message'}
+              example: {message: أرسلنا رابط التأكيد إلى بريدك.}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /auth/profile:
+    patch:
+      tags: [Auth]
+      operationId: updateProfile
+      summary: Update name, phone, or password
+      description: All fields are optional. Changing `password` requires `current_password` (checked against the session user) and `password_confirmation`. No rate limit.
+      security:
+        - sessionCookie: []
+          xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string, maxLength: 120}
+                phone: {$ref: '#/components/schemas/PhoneInput'}
+                current_password: {type: string, description: Required with `password`.}
+                password: {$ref: '#/components/schemas/PasswordInput'}
+                password_confirmation: {type: string}
+      responses:
+        '200':
+          description: Updated user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/User'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+  # ─────────────────────────────── Cart
+  /cart:
+    get:
+      tags: [Cart]
+      operationId: getCart
+      summary: Current cart, priced on the server
+      description: |
+        Resolves the cart from the session user or the `midad_cart` cookie. Returns an empty cart if neither exists (no cart is created).
+        Pass `governorate_id` to get a shipping quote. Rate limit: cart 120/min.
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - name: governorate_id
+          in: query
+          schema: {type: integer}
+          description: Must exist in governorates.
+      responses:
+        '200': {$ref: '#/components/responses/CartOk'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /cart/items:
+    post:
+      tags: [Cart]
+      operationId: addCartItem
+      summary: Add a product size to the cart
+      description: |
+        Creates the cart if needed (and sets the `midad_cart` cookie for guests). Adding an existing line increases its quantity, capped at 10.
+        Stock is checked against available stock (stock minus reserved). Errors: `errors.size_ml` (size unavailable), `errors.quantity` (out of stock or over the limit).
+        Rate limit: cart 120/min.
+      security:
+        - xsrfHeader: []
+        - sessionCookie: []
+          xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, size_ml]
+              properties:
+                slug: {type: string, maxLength: 120}
+                size_ml: {type: integer, enum: [10, 30, 50, 100]}
+                quantity: {type: integer, minimum: 1, maximum: 10, default: 1}
+      responses:
+        '201': {$ref: '#/components/responses/CartCreated'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /cart/discovery-box:
+    post:
+      tags: [Cart]
+      operationId: addDiscoveryBox
+      summary: Add a discovery box (sample set)
+      description: |
+        `product_ids` must contain exactly `discovery_box.samples` (default 6) distinct active products. At most 3 boxes per cart,
+        counted when adding. Errors go to `errors.product_ids`. Rate limit: cart 120/min.
+      security:
+        - xsrfHeader: []
+        - sessionCookie: []
+          xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_ids]
+              properties:
+                product_ids:
+                  type: array
+                  maxItems: 12
+                  items: {type: integer}
+                  example: [1, 4, 7, 9, 12, 15]
+      responses:
+        '201': {$ref: '#/components/responses/CartCreated'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /cart/items/{item}:
+    parameters:
+      - name: item
+        in: path
+        required: true
+        description: Cart line id (`items[].id`). Numeric only.
+        schema: {type: integer}
+    patch:
+      tags: [Cart]
+      operationId: updateCartItem
+      summary: Change a line's quantity (0 removes it)
+      description: Product lines are capped at 10 and checked against stock. Discovery box lines are capped at 3. Returns 404 if the line is not in the caller's cart. Rate limit cart 120/min.
+      security:
+        - xsrfHeader: []
+        - sessionCookie: []
+          xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity: {type: integer, minimum: 0, maximum: 10}
+      responses:
+        '200': {$ref: '#/components/responses/CartOk'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+    delete:
+      tags: [Cart]
+      operationId: removeCartItem
+      summary: Remove a line
+      description: 'Rate limit: cart 120/min.'
+      security:
+        - xsrfHeader: []
+        - sessionCookie: []
+          xsrfHeader: []
+      responses:
+        '200': {$ref: '#/components/responses/CartOk'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /cart/coupon:
+    post:
+      tags: [Cart]
+      operationId: applyCoupon
+      summary: Apply a coupon code
+      description: |
+        Codes are case-insensitive. An unknown code returns `errors.code = ["كود الخصم غير صحيح."]`. Other problems (expired,
+        minimum subtotal, per-customer limit, a phone-bound discovery credit) also land in `errors.code`. A coupon that
+        stops qualifying later stays attached, and `coupon.problem` explains why. Rate limits: cart 120/min and coupon 10/min.
+      security:
+        - xsrfHeader: []
+        - sessionCookie: []
+          xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: {type: string, maxLength: 40, example: MIDAD10}
+      responses:
+        '200': {$ref: '#/components/responses/CartOk'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+    delete:
+      tags: [Cart]
+      operationId: removeCoupon
+      summary: Remove the coupon
+      description: 'Rate limit: cart 120/min.'
+      security:
+        - xsrfHeader: []
+        - sessionCookie: []
+          xsrfHeader: []
+      responses:
+        '200': {$ref: '#/components/responses/CartOk'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /cart/gift:
+    put:
+      tags: [Cart]
+      operationId: setGift
+      summary: Gift wrap, recipient and message
+      description: 'HTML is stripped and text trimmed. When `wrap` is false, recipient and message are cleared. Rate limit: cart 120/min.'
+      security:
+        - xsrfHeader: []
+        - sessionCookie: []
+          xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wrap]
+              properties:
+                wrap: {type: boolean}
+                recipient: {type: [string, 'null'], maxLength: 60, example: نور}
+                message: {type: [string, 'null'], maxLength: 120, example: كل سنة وانتِ طيبة}
+      responses:
+        '200': {$ref: '#/components/responses/CartOk'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  # ─────────────────────────────── Checkout & Orders
+  /checkout:
+    post:
+      tags: [Checkout & Orders]
+      operationId: checkout
+      summary: Place an order from the current cart
+      description: |
+        Guests or customers. Prices are recomputed on the server, and stock is reserved. `cod` orders start as `placed`.
+        `card`/`wallet` orders start as `pending_payment` with a reservation window, and `redirectUrl` points to the payment page
+        (Paymob, or the local sandbox with the fake driver). An empty cart returns `errors.cart`; a stock or coupon problem returns `errors.cart` / `errors.code`.
+        Keep `number` and `phone`: guests need both to look the order up.
+        Rate limit: checkout `CHECKOUT_PER_MINUTE` (default 10)/min per user or IP.
+      security:
+        - xsrfHeader: []
+        - sessionCookie: []
+          xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customer_name, phone, governorate_id, city, street, payment_method]
+              properties:
+                customer_name: {type: string, maxLength: 120, example: محمد علي}
+                phone: {$ref: '#/components/schemas/PhoneInput'}
+                email: {type: [string, 'null'], format: email, maxLength: 190, description: Defaults to the account email.}
+                governorate_id: {type: integer, description: Must exist in governorates.}
+                city: {type: string, maxLength: 80, example: مدينة نصر}
+                street: {type: string, maxLength: 160, example: شارع عباس العقاد}
+                building: {type: [string, 'null'], maxLength: 40}
+                floor: {type: [string, 'null'], maxLength: 20}
+                apartment: {type: [string, 'null'], maxLength: 20}
+                landmark: {type: [string, 'null'], maxLength: 160}
+                note: {type: [string, 'null'], maxLength: 500}
+                payment_method: {$ref: '#/components/schemas/PaymentMethod'}
+      responses:
+        '201':
+          description: Order placed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/CheckoutResult'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /orders/{number}:
+    get:
+      tags: [Checkout & Orders]
+      operationId: getOrder
+      summary: Order page / tracking
+      description: |
+        The owner (session user) needs nothing else. Everyone else must pass the `phone` used on the order. It is normalized, so
+        `+20 10 1234 5678` and Arabic-Indic digits match. A wrong number/phone pair returns **404** (not 403) to avoid leaking which order numbers exist.
+        Rate limit: orders 30/min.
+      security:
+        - {}
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrderNumber'
+        - name: phone
+          in: query
+          schema: {type: string}
+          description: Required for guests (or for any user who doesn't own the order).
+          example: '01012345678'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/Order'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /orders/{number}/pay:
+    post:
+      tags: [Payments]
+      operationId: retryPayment
+      summary: Start a new payment attempt for a pending online order
+      description: |
+        Same ownership rule as `GET /orders/{number}` (owner, or `phone` in the body). Only allowed while the order is `pending_payment`,
+        unpaid, and `reservedUntil` is in the future; otherwise returns 422 `errors.order`. Creates a new pending payment.
+        Rate limit: pay 10/min.
+      security:
+        - xsrfHeader: []
+        - sessionCookie: []
+          xsrfHeader: []
+      parameters:
+        - $ref: '#/components/parameters/OrderNumber'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: {type: string, description: Required for guests.}
+      responses:
+        '200':
+          description: Redirect the browser to `redirectUrl`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [redirectUrl]
+                    properties:
+                      redirectUrl: {type: string, format: uri-reference}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  # ─────────────────────────────── Payments
+  /payments/paymob/webhook:
+    post:
+      tags: [Payments]
+      operationId: paymobWebhook
+      summary: Paymob "transaction processed" callback
+      description: |
+        Server-to-server, so no session or CSRF (Paymob's host is not a stateful domain). Authenticated by HMAC: the `hmac` query parameter must equal
+        `HMAC-SHA512(PAYMOB_HMAC_SECRET, concat(fields))` (hex, compared case-insensitively). The fields are read from `obj`, in this order:
+        `amount_cents, created_at, currency, error_occured, has_parent_transaction, id, integration_id, is_3d_secure, is_auth,
+        is_capture, is_refunded, is_standalone_payment, is_voided, order.id, owner, pending, source_data.pan,
+        source_data.sub_type, source_data.type, success`. Booleans are concatenated as `true`/`false`.
+
+        Idempotent per transaction id. The payment is matched by `obj.order.merchant_order_id` (the gateway reference). The order becomes
+        `paid` only when `success === true`, `pending === false`, and `amount_cents` equals the stored amount; then it moves to `placed`.
+        Not rate limited.
+      security:
+        - paymobHmac: []
+      parameters:
+        - name: hmac
+          in: query
+          required: true
+          schema: {type: string, pattern: '^[0-9a-fA-F]{128}$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: {type: string, example: TRANSACTION}
+                obj: {$ref: '#/components/schemas/PaymobTransaction'}
+      responses:
+        '200':
+          description: Signature valid (processed, or ignored as a duplicate/unknown reference).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received: {type: boolean, const: true}
+        '400':
+          description: Bad or missing HMAC.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received: {type: boolean, const: false}
+
+  /payments/sandbox/{reference}:
+    parameters:
+      - name: reference
+        in: path
+        required: true
+        schema: {type: string}
+        description: Gateway reference, `{orderNumber}-{6 chars}`.
+        example: MD-240117-AB12-X7K2QZ
+    get:
+      tags: [Payments]
+      operationId: getSandboxPayment
+      summary: Fake gateway payment page data
+      description: Only when `PAYMENT_DRIVER=fake`; otherwise 404. Stands in for the Paymob page in development. Not rate limited.
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      reference: {type: string}
+                      status: {type: string, enum: [pending, paid, failed, refunded]}
+                      amount: {$ref: '#/components/schemas/Money'}
+                      orderNumber: {type: string}
+                      phone: {type: string}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [Payments]
+      operationId: completeSandboxPayment
+      summary: Simulate a gateway result
+      description: Only when `PAYMENT_DRIVER=fake` and the app is not in production; otherwise 404. Builds a signed fake transaction and runs it through the same callback handler as the webhook. Rate limit sandbox 20/min.
+      security:
+        - xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [result]
+              properties:
+                result: {type: string, enum: [success, fail]}
+      responses:
+        '200':
+          description: Processed. The SPA then shows the order with this number and phone.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      orderNumber: {type: string}
+                      phone: {type: string}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  # ─────────────────────────────── Account
+  /account/orders:
+    get:
+      tags: [Account]
+      operationId: listMyOrders
+      summary: My orders (10 per page, newest first)
+      description: Order resources with `items` loaded (sample names are not loaded here, so `items[].samples` is always `[]`). `gift` and `history` are omitted. No rate limit.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, links, meta]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/Order'}
+                  links: {$ref: '#/components/schemas/PaginationLinks'}
+                  meta: {$ref: '#/components/schemas/PaginationMeta'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+
+  /account/addresses:
+    get:
+      tags: [Account]
+      operationId: listAddresses
+      summary: Saved addresses (default first)
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/Address'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+    post:
+      tags: [Account]
+      operationId: createAddress
+      summary: Save an address
+      description: If `is_default` is true, or this is the user's only address, it becomes the default and the others are cleared.
+      security:
+        - sessionCookie: []
+          xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AddressInput'}
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/Address'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+  /account/addresses/{address}:
+    parameters:
+      - name: address
+        in: path
+        required: true
+        schema: {type: integer}
+    put:
+      tags: [Account]
+      operationId: updateAddress
+      summary: Replace an address
+      description: Full replacement (same rules as create). Another user's address returns 404.
+      security:
+        - sessionCookie: []
+          xsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AddressInput'}
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/Address'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+    delete:
+      tags: [Account]
+      operationId: deleteAddress
+      summary: Delete an address
+      security:
+        - sessionCookie: []
+          xsrfHeader: []
+      responses:
+        '204': {description: Deleted.}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+
+  # ─────────────────────────────── Admin: Reports (dashboard is staff)
+  /admin/dashboard:
+    get:
+      tags: ['Admin: Reports']
+      operationId: adminDashboard
+      summary: Dashboard tiles
+      description: |
+        "Sales" counts orders in `placed, confirmed, preparing, shipped, delivered`, by `created_at`. `week` covers today plus the previous 6 days.
+        Role: staff. Rate limit: admin 300/min.
+      x-required-role: staff
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/Dashboard'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  # ─────────────────────────────── Admin: Orders
+  /admin/orders:
+    get:
+      tags: ['Admin: Orders']
+      operationId: adminListOrders
+      summary: Orders desk (25 per page)
+      description: '`q` matches the order number (case-insensitive), phone, or customer name. `from`/`to` filter `created_at` by date. `meta.counts` gives all-time counts per status. Role: staff. Rate limit: admin 300/min.'
+      x-required-role: staff
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: status, in: query, schema: {$ref: '#/components/schemas/OrderStatus'}}
+        - {name: payment_status, in: query, schema: {$ref: '#/components/schemas/PaymentStatus'}}
+        - {name: payment_method, in: query, schema: {$ref: '#/components/schemas/PaymentMethod'}}
+        - {name: governorate_id, in: query, schema: {type: integer}}
+        - {name: from, in: query, schema: {type: string, format: date}}
+        - {name: to, in: query, schema: {type: string, format: date}}
+        - {name: q, in: query, schema: {type: string, maxLength: 60}}
+        - {name: page, in: query, schema: {type: integer}}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/AdminOrderRow'}
+                  meta:
+                    allOf:
+                      - $ref: '#/components/schemas/AdminListMeta'
+                      - type: object
+                        properties:
+                          counts:
+                            type: object
+                            description: Status -> number of orders (statuses with no orders are absent).
+                            additionalProperties: {type: integer}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /admin/orders/{number}:
+    get:
+      tags: ['Admin: Orders']
+      operationId: adminGetOrder
+      summary: Full order (with payments, history, allowed transitions)
+      description: 'Bound by order number. Role: staff. Rate limit: admin 300/min.'
+      x-required-role: staff
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/OrderNumber'
+      responses:
+        '200': {$ref: '#/components/responses/AdminOrderOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /admin/orders/{number}/status:
+    post:
+      tags: ['Admin: Orders']
+      operationId: adminTransitionOrder
+      summary: Move an order to another status
+      description: |
+        Allowed transitions (`Order::TRANSITIONS`): pending_payment -> placed|cancelled; placed -> confirmed|cancelled;
+        confirmed -> preparing|cancelled; preparing -> shipped|cancelled; shipped -> delivered|returned; delivered -> returned.
+        Anything else returns 422 `errors.status`. Confirming turns the reservation into a sale. Cancelling releases the reservation, or restocks if the order was already sold.
+        Returning restocks. Role: staff. Rate limit: admin 300/min.
+      x-required-role: staff
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      parameters:
+        - $ref: '#/components/parameters/OrderNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {$ref: '#/components/schemas/OrderStatus'}
+                note: {type: [string, 'null'], maxLength: 255}
+      responses:
+        '200': {$ref: '#/components/responses/AdminOrderOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /admin/orders/{number}/note:
+    put:
+      tags: ['Admin: Orders']
+      operationId: adminOrderNote
+      summary: Set the internal (staff-only) note
+      description: 'Send `internal_note` explicitly (null clears it); omitting the key is a 422. Role: staff. Rate limit: admin 300/min.'
+      x-required-role: staff
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      parameters:
+        - $ref: '#/components/parameters/OrderNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [internal_note]
+              properties:
+                internal_note: {type: [string, 'null'], maxLength: 2000}
+      responses:
+        '200': {$ref: '#/components/responses/AdminOrderOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /admin/orders/{number}/refund:
+    post:
+      tags: ['Admin: Orders']
+      operationId: adminRefundOrder
+      summary: Record a manual refund (admin only)
+      description: |
+        Bookkeeping only: the money goes back through Paymob's dashboard. Marks the latest paid payment and the order as `refunded`,
+        and adds a history entry `استرداد: <note>`. Returns 422 `errors.refund` if there is no completed online payment. Role: **admin**. Rate limit: admin 300/min.
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      parameters:
+        - $ref: '#/components/parameters/OrderNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties:
+                note: {type: string, maxLength: 255}
+      responses:
+        '200': {$ref: '#/components/responses/AdminOrderOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /admin/orders/{number}/waybill:
+    get:
+      tags: ['Admin: Orders']
+      operationId: adminOrderWaybill
+      summary: Printable waybill (HTML)
+      description: 'Plain HTML rendered from `resources/views/admin/waybill.blade.php`, for the browser to print. Role: staff. Rate limit: admin 300/min.'
+      x-required-role: staff
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/OrderNumber'
+      responses:
+        '200':
+          description: HTML page.
+          content:
+            text/html:
+              schema: {type: string}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+  # ─────────────────────────────── Admin: Products
+  /admin/products:
+    get:
+      tags: ['Admin: Products']
+      operationId: adminListProducts
+      summary: Products (non-deleted, active and inactive)
+      description: '`status=low` matches products with any variant at or below its low-stock threshold (stock minus reserved). `q` searches the name, the Latin name, and the original perfume. Role: staff. Rate limit: admin 300/min.'
+      x-required-role: staff
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: q, in: query, schema: {type: string, maxLength: 80}}
+        - {name: category_id, in: query, schema: {type: integer}}
+        - {name: status, in: query, schema: {type: string, enum: [active, inactive, low]}}
+        - {name: per_page, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 30}}
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/AdminProductRow'}
+                  meta: {$ref: '#/components/schemas/AdminListMeta'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+    post:
+      tags: ['Admin: Products']
+      operationId: adminCreateProduct
+      summary: Create a product (admin only)
+      description: 'The slug is generated from `latin_name`. New variants get a generated SKU and the given starting `stock`. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminProductInput'}
+      responses:
+        '201': {$ref: '#/components/responses/AdminProductCreated'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /admin/products/{product}:
+    parameters:
+      - $ref: '#/components/parameters/ProductId'
+    get:
+      tags: ['Admin: Products']
+      operationId: adminGetProduct
+      summary: Full product for the editor
+      description: 'Role: staff. Rate limit: admin 300/min.'
+      x-required-role: staff
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {$ref: '#/components/responses/AdminProductOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: ['Admin: Products']
+      operationId: adminUpdateProduct
+      summary: Update a product (admin only)
+      description: |
+        Full replacement. Sizes missing from `variants` are deactivated, not deleted. `stock` is ignored on update, and a newly added size starts at 0;
+        use `POST /admin/variants/{variant}/stock`. Notes and pyramid are replaced. Role: **admin**. Rate limit: admin 300/min.
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AdminProductInput'}
+      responses:
+        '200': {$ref: '#/components/responses/AdminProductOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+    delete:
+      tags: ['Admin: Products']
+      operationId: adminDeleteProduct
+      summary: Deactivate and soft-delete a product (admin only)
+      description: 'Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      responses:
+        '204': {description: Deleted.}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+
+  /admin/products/{product}/images:
+    post:
+      tags: ['Admin: Products']
+      operationId: adminUploadProductImage
+      summary: Upload a product image (admin only)
+      description: 'Stored as WebP renditions (400/800/1600 px) and appended after the existing images. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  contentMediaType: image/*
+                  description: jpg, jpeg, png or webp; max 5120 KB.
+                alt: {type: string, maxLength: 160, description: Defaults to the product name.}
+      responses:
+        '201': {$ref: '#/components/responses/AdminProductCreated'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+
+  /admin/products/{product}/images/order:
+    put:
+      tags: ['Admin: Products']
+      operationId: adminSortProductImages
+      summary: Reorder images (admin only)
+      description: '`ids` in display order; the first image becomes the card image. Ids that belong to other products are ignored. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items: {type: integer}
+      responses:
+        '200': {$ref: '#/components/responses/AdminProductOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+  /admin/products/{product}/images/{image}:
+    delete:
+      tags: ['Admin: Products']
+      operationId: adminDeleteProductImage
+      summary: Delete an image and its files (admin only)
+      description: 'Returns 404 if the image belongs to another product. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+        - {name: image, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200': {$ref: '#/components/responses/AdminProductOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+
+  /admin/stock/low:
+    get:
+      tags: ['Admin: Products']
+      operationId: adminLowStock
+      summary: Active variants at or below their low-stock threshold (max 50, lowest first)
+      description: 'Role: staff. Rate limit: admin 300/min.'
+      x-required-role: staff
+      security: [{sessionCookie: []}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/LowStockRow'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /admin/variants/{variant}/stock:
+    post:
+      tags: ['Admin: Products']
+      operationId: adminAdjustStock
+      summary: Adjust a variant's stock with a reason
+      description: |
+        Writes a `stock_movements` row. If the new stock would fall below the reserved quantity, returns 422 **without** an
+        `errors` object (`{message: "لا يمكن أن يقل المخزون عن الكمية المحجوزة لطلبات قائمة (N)."}`). Role: staff. Rate limit: admin 300/min.
+      x-required-role: staff
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      parameters:
+        - $ref: '#/components/parameters/VariantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [change, reason]
+              properties:
+                change: {type: integer, minimum: -10000, maximum: 10000, not: {const: 0}}
+                reason: {type: string, enum: [restock, adjustment, damage]}
+                note: {type: [string, 'null'], maxLength: 255}
+      responses:
+        '200': {$ref: '#/components/responses/AdminProductOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422':
+          description: Validation failed, or the stock would fall below the reserved quantity (plain `{message}`).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                  - $ref: '#/components/schemas/Error'
+
+  /admin/variants/{variant}/movements:
+    get:
+      tags: ['Admin: Products']
+      operationId: adminStockMovements
+      summary: Last 50 stock movements of a variant
+      description: 'Role: staff. Rate limit: admin 300/min.'
+      x-required-role: staff
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/VariantId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/StockMovement'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+  # ─────────────────────────────── Admin: Store (all admin only)
+  /admin/categories:
+    get:
+      tags: ['Admin: Store']
+      operationId: adminListCategories
+      summary: All categories with their spotlights (admin only)
+      description: 'Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {$ref: '#/components/responses/AdminCategoriesOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /admin/categories/{category}:
+    put:
+      tags: ['Admin: Store']
+      operationId: adminUpdateCategory
+      summary: Update a category (admin only)
+      description: 'Returns the full category list. Invalidates the home cache. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      parameters:
+        - {name: category, in: path, required: true, schema: {type: integer}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: {type: string, maxLength: 64, example: شرقي}
+                latin_name: {type: [string, 'null'], maxLength: 64, example: Oriental}
+                description: {type: [string, 'null'], maxLength: 1000}
+                is_active: {type: boolean}
+                sort: {type: integer, minimum: 0}
+      responses:
+        '200': {$ref: '#/components/responses/AdminCategoriesOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+  /admin/spotlights:
+    post:
+      tags: ['Admin: Store']
+      operationId: adminCreateSpotlight
+      summary: Create a category spotlight (admin only)
+      description: |
+        `product_id` must belong to `category_id` and must not be deleted. The palette must pass the readability check: fg on bg >= 4.5:1,
+        fg on surface >= 4.5:1, muted on bg >= 3:1. Failures go to `errors["palette.fg" | "palette.surface" | "palette.muted"]`.
+        Role: **admin**. Rate limit: admin 300/min.
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SpotlightInput'}
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/AdminSpotlight'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+  /admin/spotlights/{spotlight}:
+    parameters:
+      - {name: spotlight, in: path, required: true, schema: {type: integer}}
+    put:
+      tags: ['Admin: Store']
+      operationId: adminUpdateSpotlight
+      summary: Update a spotlight (admin only)
+      description: 'Same rules as create. Clears the `sample` flag. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SpotlightInput'}
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/AdminSpotlight'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+    delete:
+      tags: ['Admin: Store']
+      operationId: adminDeleteSpotlight
+      summary: Delete a spotlight (admin only)
+      description: 'Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      responses:
+        '204': {description: Deleted.}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+
+  /admin/governorates:
+    get:
+      tags: ['Admin: Store']
+      operationId: adminListGovernorates
+      summary: All governorates with shipping settings (admin only)
+      description: 'Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {$ref: '#/components/responses/AdminGovernoratesOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    put:
+      tags: ['Admin: Store']
+      operationId: adminUpdateGovernorates
+      summary: Bulk-update shipping fees and delivery days (admin only)
+      description: 'Updates only the rows sent, in one transaction. `active` defaults to true when omitted. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rows]
+              properties:
+                rows:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, fee, daysMin, daysMax]
+                    properties:
+                      id: {type: integer}
+                      fee: {type: number, minimum: 0, maximum: 2000, description: EGP.}
+                      daysMin: {type: integer, minimum: 0, maximum: 30}
+                      daysMax: {type: integer, maximum: 30, description: Must be >= daysMin.}
+                      active: {type: boolean, default: true}
+      responses:
+        '200': {$ref: '#/components/responses/AdminGovernoratesOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+  /admin/settings:
+    get:
+      tags: ['Admin: Store']
+      operationId: adminGetSettings
+      summary: Store settings (admin only)
+      description: 'Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {$ref: '#/components/responses/SettingsOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    put:
+      tags: ['Admin: Store']
+      operationId: adminUpdateSettings
+      summary: Update store settings (admin only)
+      description: 'Body keys are camelCase, unlike other admin inputs. Empty announcements are dropped. Invalidates the home cache. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [freeShippingThreshold, discoveryPrice, discoveryCreditDays, giftWrapFee, reservationMinutes]
+              properties:
+                announcements:
+                  type: array
+                  maxItems: 5
+                  items: {type: string, maxLength: 80}
+                  example: [شحن مجاني فوق ١٠٠٠ ج.م]
+                freeShippingThreshold: {type: number, minimum: 0, maximum: 100000}
+                discoveryPrice: {type: number, minimum: 0, maximum: 10000}
+                discoveryCreditDays: {type: integer, minimum: 1, maximum: 365}
+                giftWrapFee: {type: number, minimum: 0, maximum: 1000}
+                reservationMinutes: {type: integer, minimum: 5, maximum: 1440}
+                whatsapp:
+                  type: [string, 'null']
+                  description: Any Egyptian mobile as typed (`01XXXXXXXXX`, `+20 1X…`, Arabic digits). Stored and returned in wa.me form `201XXXXXXXXX`.
+                  example: '201012345678'
+      responses:
+        '200': {$ref: '#/components/responses/SettingsOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+  /admin/finder:
+    get:
+      tags: ['Admin: Store']
+      operationId: adminGetFinder
+      summary: Finder questions with answer weights (admin only)
+      description: 'Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {$ref: '#/components/responses/AdminFinderOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /admin/finder/answers/{answer}:
+    put:
+      tags: ['Admin: Store']
+      operationId: adminUpdateFinderAnswer
+      summary: Update an answer's label and weights (admin only)
+      description: |
+        Replaces all weights. `categories` maps category slug -> weight in -5..5 (unknown slugs and zero weights are skipped).
+        Each note in `notes` gets weight 2. Returns the whole finder. Role: **admin**. Rate limit: admin 300/min.
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      parameters:
+        - {name: answer, in: path, required: true, schema: {type: integer}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label]
+              properties:
+                label: {type: string, maxLength: 80, example: دافئ وغامض}
+                categories:
+                  type: object
+                  additionalProperties: {type: integer, minimum: -5, maximum: 5}
+                  example: {oriental: 3, fresh: -2}
+                notes:
+                  type: array
+                  maxItems: 20
+                  items: {type: string, description: Must match an existing note name.}
+                  example: [عود, عنبر]
+      responses:
+        '200': {$ref: '#/components/responses/AdminFinderOk'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+  # ─────────────────────────────── Admin: Coupons (admin only)
+  /admin/coupons:
+    get:
+      tags: ['Admin: Coupons']
+      operationId: adminListCoupons
+      summary: Coupons (30 per page)
+      description: '`kind=discovery_credit` lists the automatic, phone-bound credits issued for discovery box purchases. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: kind, in: query, schema: {type: string, enum: [general, discovery_credit], default: general}}
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/Coupon'}
+                  meta: {$ref: '#/components/schemas/AdminListMeta'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+    post:
+      tags: ['Admin: Coupons']
+      operationId: adminCreateCoupon
+      summary: Create a coupon
+      description: 'Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CouponInput'}
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/Coupon'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+  /admin/coupons/{coupon}:
+    parameters:
+      - {name: coupon, in: path, required: true, schema: {type: integer}}
+    put:
+      tags: ['Admin: Coupons']
+      operationId: adminUpdateCoupon
+      summary: Replace a coupon
+      description: 'Full replacement; the code must stay unique. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CouponInput'}
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/Coupon'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+    delete:
+      tags: ['Admin: Coupons']
+      operationId: adminDeleteCoupon
+      summary: Delete a coupon (or deactivate it if it was used)
+      description: 'A coupon with `used > 0` is deactivated, not deleted, to keep the history. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: [], xsrfHeader: []}]
+      responses:
+        '204': {description: Deleted or deactivated.}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '419': {$ref: '#/components/responses/CsrfMismatch'}
+
+  # ─────────────────────────────── Admin: Customers (admin only)
+  /admin/customers:
+    get:
+      tags: ['Admin: Customers']
+      operationId: adminListCustomers
+      summary: Customer accounts (30 per page)
+      description: '`spent` sums orders that are not cancelled or `pending_payment`. Only `role=customer` users are listed. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: q, in: query, schema: {type: string, maxLength: 80}, description: 'Searches name, email and phone.'}
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/CustomerRow'}
+                  meta: {$ref: '#/components/schemas/AdminListMeta'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+  /admin/customers/{user}:
+    get:
+      tags: ['Admin: Customers']
+      operationId: adminGetCustomer
+      summary: One account with addresses and orders
+      description: 'Any user id resolves (staff/admin accounts too), not only customers. Role: **admin**. Rate limit: admin 300/min.'
+      x-required-role: admin
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: user, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/CustomerDetail'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+  # ─────────────────────────────── Admin: Reports (admin only)
+  /admin/reports:
+    get:
+      tags: ['Admin: Reports']
+      operationId: adminReport
+      summary: Sales report for a date range
+      description: |
+        Defaults to the last 30 days ending today. A range longer than 366 days is clamped to the 366 days before `to`. Counts only orders in
+        `placed, confirmed, preparing, shipped, delivered`, by `created_at`. Role: **admin**. Rate limit: admin 300/min.
+      x-required-role: admin
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/ReportFrom'
+        - $ref: '#/components/parameters/ReportTo'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/Report'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+  /admin/reports/orders.csv:
+    get:
+      tags: ['Admin: Reports']
+      operationId: adminExportOrders
+      summary: CSV export of orders in a range
+      description: |
+        Streamed download `midad-orders-{from}-{to}.csv` (UTF-8 with BOM for Excel). Includes **all** statuses, unlike the report.
+        Arabic header row: رقم الطلب, التاريخ, الحالة, العميل, الموبايل, المحافظة, الدفع, حالة الدفع, المجموع الفرعي, الخصم, الشحن, الإجمالي.
+        Money columns are EGP. "الخصم" is discount plus credit. Customer names are escaped against CSV formula injection.
+        Same range rules as `/admin/reports`. Role: **admin**. Rate limit: admin 300/min.
+      x-required-role: admin
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/ReportFrom'
+        - $ref: '#/components/parameters/ReportTo'
+      responses:
+        '200':
+          description: CSV file.
+          headers:
+            Content-Disposition:
+              schema: {type: string}
+              example: attachment; filename=midad-orders-2026-09-18-2026-10-17.csv
+          content:
+            text/csv:
+              schema: {type: string}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: midad-session
+      description: Laravel session cookie (name derived from APP_NAME unless SESSION_COOKIE is set). Obtained via /auth/login or /auth/register.
+    xsrfHeader:
+      type: apiKey
+      in: header
+      name: X-XSRF-TOKEN
+      description: Value of the `XSRF-TOKEN` cookie from `GET /sanctum/csrf-cookie`. Required on every non-GET request from the SPA (stateful domain), signed in or not.
+    paymobHmac:
+      type: apiKey
+      in: query
+      name: hmac
+      description: HMAC-SHA512 of the concatenated transaction fields, keyed with PAYMOB_HMAC_SECRET (see the webhook operation).
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 1, default: 1}
+    OrderNumber:
+      name: number
+      in: path
+      required: true
+      description: Public order number.
+      schema: {type: string}
+    ProductId:
+      name: product
+      in: path
+      required: true
+      description: Product id (soft-deleted products return 404).
+      schema: {type: integer}
+    VariantId:
+      name: variant
+      in: path
+      required: true
+      schema: {type: integer}
+    NoteFilter:
+      name: note
+      in: query
+      description: Note slug.
+      schema: {type: string, maxLength: 64}
+    SizeFilter:
+      name: size
+      in: query
+      description: Only products with an active variant of this size.
+      schema: {type: integer, enum: [10, 30, 50, 100]}
+    PriceMin:
+      name: price_min
+      in: query
+      description: EGP, matched against active variant prices.
+      schema: {type: number, minimum: 0, maximum: 100000}
+    PriceMax:
+      name: price_max
+      in: query
+      description: EGP.
+      schema: {type: number, minimum: 0, maximum: 100000}
+    ProductSort:
+      name: sort
+      in: query
+      schema: {type: string, enum: [default, best, new, price_asc, price_desc], default: default}
+    CatalogPerPage:
+      name: per_page
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 48, default: 24}
+    ReportFrom:
+      name: from
+      in: query
+      schema: {type: string, format: date}
+    ReportTo:
+      name: to
+      in: query
+      description: Must be on or after `from`. Defaults to today.
+      schema: {type: string, format: date}
+
+  responses:
+    Unauthenticated:
+      description: Not signed in.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {message: سجّل الدخول أولاً.}
+    Forbidden:
+      description: Signed in but the role gate (`can:staff` / `can:admin`) denied the request.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {message: ليس لديك صلاحية لهذا الإجراء.}
+    NotFound:
+      description: Not found (also used for a wrong order/phone pair and for resources owned by someone else).
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {message: غير موجود.}
+    CsrfMismatch:
+      description: Missing or expired XSRF token. Not localized; this is Laravel's default message.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {message: CSRF token mismatch.}
+    ValidationFailed:
+      description: Validation failed.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ValidationError'}
+    TooManyRequests:
+      description: Rate limit exceeded. `Retry-After` gives the seconds to wait.
+      headers:
+        Retry-After:
+          schema: {type: integer}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {message: محاولات كثيرة. انتظر قليلاً ثم حاول مرة أخرى.}
+    CartOk:
+      description: The full cart, priced on the server. For guests it also sets or refreshes the `midad_cart` cookie when a cart exists.
+      headers:
+        Set-Cookie:
+          schema: {type: string}
+          description: '`midad_cart=<encrypted>; HttpOnly; SameSite=Lax; Max-Age=2592000` (guests only)'
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: {$ref: '#/components/schemas/Cart'}
+    CartCreated:
+      description: Line added; returns the full cart (and sets the guest cookie).
+      headers:
+        Set-Cookie:
+          schema: {type: string}
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: {$ref: '#/components/schemas/Cart'}
+    AdminOrderOk:
+      description: The full admin view of the order.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: {$ref: '#/components/schemas/AdminOrder'}
+    AdminProductOk:
+      description: The full admin view of the product.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: {$ref: '#/components/schemas/AdminProduct'}
+    AdminProductCreated:
+      description: Created; returns the full admin view of the product.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: {$ref: '#/components/schemas/AdminProduct'}
+    AdminCategoriesOk:
+      description: All categories.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: array
+                items: {$ref: '#/components/schemas/AdminCategory'}
+    AdminGovernoratesOk:
+      description: All governorates.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: array
+                items: {$ref: '#/components/schemas/AdminGovernorate'}
+    SettingsOk:
+      description: Current settings.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: {$ref: '#/components/schemas/Settings'}
+    AdminFinderOk:
+      description: All finder questions.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: array
+                items: {$ref: '#/components/schemas/AdminFinderQuestion'}
+
+  schemas:
+    # ── primitives
+    Money:
+      type: number
+      description: Egyptian pounds. Whole amounts are integers; otherwise rounded to 2 decimals. Stored internally as piasters.
+      example: 450
+    MoneyNullable:
+      type: [number, 'null']
+      description: Egyptian pounds, or null.
+    PhoneInput:
+      type: string
+      description: Egyptian mobile number. Arabic-Indic digits, spaces, dashes and a +20 prefix are accepted, then normalized to `01[0125]XXXXXXXX` before checking.
+      example: '01012345678'
+    PasswordInput:
+      type: string
+      minLength: 8
+      description: At least 8 characters, with at least one letter and one number. Needs a matching `password_confirmation`.
+    OrderStatus:
+      type: string
+      enum: [pending_payment, placed, confirmed, preparing, shipped, delivered, cancelled, returned]
+    PaymentStatus:
+      type: string
+      enum: [unpaid, pending, paid, failed, refunded]
+    PaymentMethod:
+      type: string
+      enum: [cod, card, wallet]
+    HexColor:
+      type: string
+      pattern: '^#[0-9A-Fa-f]{6}$'
+    Message:
+      type: object
+      required: [message]
+      properties:
+        message: {type: string}
+
+    # ── errors
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: {type: string, description: 'Arabic, human-readable.'}
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: {type: string}
+    ValidationError:
+      type: object
+      required: [message, errors]
+      properties:
+        message: {type: string, const: راجع البيانات المكتوبة.}
+        errors:
+          type: object
+          description: Field path (dot notation, e.g. `variants.0.price`) -> Arabic messages.
+          additionalProperties:
+            type: array
+            items: {type: string}
+      example:
+        message: راجع البيانات المكتوبة.
+        errors:
+          phone: [اكتب رقم موبايل مصري صحيح من ١١ رقماً يبدأ بـ 01.]
+
+    # ── pagination
+    PaginationLinks:
+      type: object
+      properties:
+        first: {type: [string, 'null']}
+        last: {type: [string, 'null']}
+        prev: {type: [string, 'null']}
+        next: {type: [string, 'null']}
+    PaginationMeta:
+      type: object
+      description: Laravel's standard resource pagination meta.
+      properties:
+        current_page: {type: integer}
+        from: {type: [integer, 'null']}
+        last_page: {type: integer}
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url: {type: [string, 'null']}
+              label: {type: string}
+              active: {type: boolean}
+        path: {type: string}
+        per_page: {type: integer}
+        to: {type: [integer, 'null']}
+        total: {type: integer}
+    AdminListMeta:
+      type: object
+      description: Admin lists use this compact meta instead of Laravel's resource pagination.
+      required: [total, current_page, last_page]
+      properties:
+        total: {type: integer}
+        current_page: {type: integer}
+        last_page: {type: integer}
+
+    # ── catalog
+    Image:
+      type: object
+      properties:
+        src: {type: string, example: /storage/products/12/abc-800.webp}
+        srcset: {type: string, example: '/storage/products/12/abc-400.webp 400w, /storage/products/12/abc-800.webp 800w, /storage/products/12/abc-1600.webp 1600w'}
+        alt: {type: string, example: عود ملكي}
+    Variant:
+      type: object
+      description: An active size of a product.
+      properties:
+        ml: {type: integer, enum: [10, 30, 50, 100]}
+        price: {$ref: '#/components/schemas/Money'}
+        compareAt: {$ref: '#/components/schemas/MoneyNullable'}
+        stock: {type: integer, description: 'Available units (stock minus reserved), never negative.'}
+    Pyramid:
+      type: [object, 'null']
+      description: Note pyramid; null when no layer has been entered.
+      properties:
+        top: {type: array, items: {type: string}, example: [برغموت]}
+        heart: {type: array, items: {type: string}, example: [ورد]}
+        base: {type: array, items: {type: string}, example: [عود, عنبر]}
+    Product:
+      type: object
+      description: Product card (ProductResource). Relation-backed fields are present whenever the relation is loaded, which every storefront endpoint does.
+      required: [id, slug, name]
+      properties:
+        id: {type: integer}
+        slug: {type: string, example: royal-oud}
+        category: {type: string, description: Category slug., example: oriental}
+        name: {type: string, example: عود ملكي}
+        latin: {type: string, example: Royal Oud}
+        inspiredBy: {type: [string, 'null'], example: Oud Wood}
+        signature: {type: [string, 'null'], description: Signature note., example: عود}
+        concentration: {type: [string, 'null'], example: EAU DE PARFUM}
+        notes:
+          type: array
+          description: Key notes.
+          items: {type: string}
+          example: [عود, زعفران]
+        variants:
+          type: array
+          items: {$ref: '#/components/schemas/Variant'}
+        fromPrice: {$ref: '#/components/schemas/MoneyNullable'}
+        image:
+          oneOf:
+            - $ref: '#/components/schemas/Image'
+            - type: 'null'
+    ProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          properties:
+            description: {type: [string, 'null']}
+            pyramid: {$ref: '#/components/schemas/Pyramid'}
+            images:
+              type: array
+              items: {$ref: '#/components/schemas/Image'}
+    ProductPage:
+      type: object
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Product'}
+        links: {$ref: '#/components/schemas/PaginationLinks'}
+        meta: {$ref: '#/components/schemas/PaginationMeta'}
+    Category:
+      type: object
+      required: [slug, name]
+      properties:
+        slug: {type: string, example: oriental}
+        name: {type: string, example: شرقي}
+        latin: {type: [string, 'null'], example: Oriental}
+        description: {type: [string, 'null']}
+        count: {type: integer, description: Active products. Only on `GET /categories`.}
+    Palette:
+      type: object
+      required: [bg, surface, fg, muted, accent]
+      properties:
+        bg: {$ref: '#/components/schemas/HexColor'}
+        surface: {$ref: '#/components/schemas/HexColor'}
+        fg: {$ref: '#/components/schemas/HexColor'}
+        muted: {$ref: '#/components/schemas/HexColor'}
+        accent: {$ref: '#/components/schemas/HexColor'}
+      example: {bg: '#3B342C', surface: '#4A4137', fg: '#F2EADB', muted: '#CFC4B2', accent: '#D6B77E'}
+    Texture:
+      type: string
+      enum: [plain, resin, petals, smoke]
+    Ingredient:
+      type: string
+      enum: [vanilla, amber, lavender, cardamom, strawberry, blackberry, jasmine, musk, incense, tobacco, oud, resin]
+    Spotlight:
+      type: object
+      description: A category's featured product and its visual identity (SpotlightResource).
+      properties:
+        sample: {type: boolean, description: True for seeded placeholder spotlights.}
+        tagline: {type: string, example: دفء الشرق في قطرة}
+        palette: {$ref: '#/components/schemas/Palette'}
+        texture: {$ref: '#/components/schemas/Texture'}
+        ingredients:
+          type: array
+          maxItems: 4
+          items: {$ref: '#/components/schemas/Ingredient'}
+        sceneImage: {type: [string, 'null']}
+        bottleImage: {type: [string, 'null']}
+        pyramid: {$ref: '#/components/schemas/Pyramid'}
+        product: {$ref: '#/components/schemas/Product'}
+    HomeSection:
+      type: object
+      properties:
+        category: {$ref: '#/components/schemas/Category'}
+        spotlight:
+          oneOf:
+            - $ref: '#/components/schemas/Spotlight'
+            - type: 'null'
+        palette: {$ref: '#/components/schemas/Palette'}
+        others:
+          type: array
+          description: The category's other active products (the spotlight product excluded).
+          items: {$ref: '#/components/schemas/Product'}
+    Home:
+      type: object
+      properties:
+        announcements:
+          type: array
+          items: {type: string}
+          example: [شحن مجاني فوق ١٠٠٠ ج.م]
+        discovery:
+          type: object
+          properties:
+            price: {$ref: '#/components/schemas/Money'}
+            samples: {type: integer, default: 6}
+            sampleMl: {type: integer, default: 2}
+        sections:
+          type: array
+          items: {$ref: '#/components/schemas/HomeSection'}
+    Note:
+      type: object
+      properties:
+        slug: {type: string}
+        name: {type: string, example: عنبر}
+        count: {type: integer}
+    FinderQuestion:
+      type: object
+      properties:
+        key: {type: string, example: mood}
+        q: {type: string, example: أي إحساس تبحث عنه؟}
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              v: {type: string, example: warm}
+              label: {type: string, example: دافئ}
+    FinderResult:
+      type: object
+      properties:
+        product: {$ref: '#/components/schemas/Product'}
+        why:
+          type: array
+          maxItems: 2
+          description: Names of the notes or categories that matched.
+          items: {type: string}
+    Governorate:
+      type: object
+      properties:
+        id: {type: integer}
+        name: {type: string, example: القاهرة}
+        fee: {$ref: '#/components/schemas/Money'}
+        days:
+          type: array
+          description: '[min, max] delivery days.'
+          minItems: 2
+          maxItems: 2
+          items: {type: integer}
+          example: [2, 4]
+
+    # ── auth
+    User:
+      type: object
+      properties:
+        id: {type: integer}
+        name: {type: string, example: سارة أحمد}
+        email: {type: string, format: email}
+        phone: {type: [string, 'null'], example: '01012345678'}
+        role: {type: string, enum: [customer, staff, admin]}
+        emailVerified: {type: boolean}
+
+    # ── cart
+    CartItem:
+      oneOf:
+        - $ref: '#/components/schemas/CartProductItem'
+        - $ref: '#/components/schemas/CartDiscoveryItem'
+      discriminator:
+        propertyName: kind
+        mapping:
+          product: '#/components/schemas/CartProductItem'
+          discovery_box: '#/components/schemas/CartDiscoveryItem'
+    CartItemBase:
+      type: object
+      required: [id, kind, quantity, unitPrice, lineTotal, available]
+      properties:
+        id: {type: integer}
+        kind: {type: string, enum: [product, discovery_box]}
+        quantity: {type: integer}
+        unitPrice: {$ref: '#/components/schemas/Money'}
+        lineTotal: {$ref: '#/components/schemas/Money'}
+        available: {type: boolean, description: False if the size was deactivated or stock is below the quantity. Unavailable product lines price at 0.}
+    CartProductItem:
+      allOf:
+        - $ref: '#/components/schemas/CartItemBase'
+        - type: object
+          properties:
+            kind: {const: product}
+            name: {type: [string, 'null'], example: عود ملكي}
+            latin: {type: [string, 'null']}
+            slug: {type: [string, 'null']}
+            ml: {type: [integer, 'null']}
+            stock: {type: integer, description: Available units.}
+    CartDiscoveryItem:
+      allOf:
+        - $ref: '#/components/schemas/CartItemBase'
+        - type: object
+          properties:
+            kind: {const: discovery_box}
+            name: {type: string, const: مجموعة الاكتشاف}
+            samples:
+              type: array
+              items: {type: string}
+    Cart:
+      type: object
+      required: [items, count, coupon, gift, summary]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CartItem'}
+        count: {type: integer, description: Sum of quantities.}
+        coupon:
+          type: [object, 'null']
+          properties:
+            code: {type: string}
+            label: {type: string, example: خصم 10٪}
+            problem: {type: [string, 'null'], description: Why the attached coupon currently doesn't apply.}
+        gift:
+          type: object
+          properties:
+            wrap: {type: boolean}
+            recipient: {type: [string, 'null']}
+            message: {type: [string, 'null']}
+        summary:
+          type: object
+          properties:
+            subtotal: {$ref: '#/components/schemas/Money'}
+            discount: {$ref: '#/components/schemas/Money'}
+            credit: {$ref: '#/components/schemas/Money'}
+            shipping: {type: [number, 'null'], description: EGP; null until a governorate is known.}
+            gift: {$ref: '#/components/schemas/Money'}
+            total: {$ref: '#/components/schemas/Money'}
+            freeShippingRemaining: {type: [number, 'null'], description: EGP left to reach free shipping.}
+
+    # ── orders
+    CheckoutResult:
+      type: object
+      required: [number, phone, status]
+      properties:
+        number: {type: string}
+        phone: {type: string, description: Normalized phone; guests need it to view the order.}
+        status: {type: string, enum: [placed, pending_payment]}
+        redirectUrl: {type: [string, 'null'], description: Payment page for card/wallet; null for COD.}
+    ShippingAddress:
+      type: object
+      properties:
+        governorate: {type: string, example: الجيزة}
+        city: {type: string}
+        street: {type: string}
+        building: {type: [string, 'null']}
+        floor: {type: [string, 'null']}
+        apartment: {type: [string, 'null']}
+        landmark: {type: [string, 'null']}
+    OrderItem:
+      type: object
+      properties:
+        kind: {type: string, enum: [product, discovery_box]}
+        name: {type: string}
+        ml: {type: [integer, 'null']}
+        quantity: {type: integer}
+        unitPrice: {$ref: '#/components/schemas/Money'}
+        lineTotal: {$ref: '#/components/schemas/Money'}
+        samples:
+          type: array
+          items: {type: string}
+    OrderTotals:
+      type: object
+      properties:
+        subtotal: {$ref: '#/components/schemas/Money'}
+        discount: {$ref: '#/components/schemas/Money'}
+        credit: {$ref: '#/components/schemas/Money'}
+        shipping: {$ref: '#/components/schemas/Money'}
+        gift: {$ref: '#/components/schemas/Money'}
+        total: {$ref: '#/components/schemas/Money'}
+    OrderHistoryEntry:
+      type: object
+      properties:
+        status: {$ref: '#/components/schemas/OrderStatus'}
+        label: {type: string, example: تم الشحن}
+        at: {type: [string, 'null'], format: date-time}
+    Order:
+      type: object
+      description: OrderResource. `items`, `gift` and `history` appear only when loaded (all three on `GET /orders/{number}`; only `items` on `/account/orders`).
+      properties:
+        number: {type: string}
+        status: {$ref: '#/components/schemas/OrderStatus'}
+        statusLabel: {type: string, example: تم استلام الطلب}
+        paymentMethod: {$ref: '#/components/schemas/PaymentMethod'}
+        paymentStatus: {$ref: '#/components/schemas/PaymentStatus'}
+        canRetryPayment: {type: boolean}
+        reservedUntil: {type: [string, 'null'], format: date-time}
+        customerName: {type: string}
+        phone: {type: string}
+        shippingAddress: {$ref: '#/components/schemas/ShippingAddress'}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/OrderItem'}
+        gift:
+          type: [object, 'null']
+          properties:
+            recipient: {type: [string, 'null']}
+            message: {type: [string, 'null']}
+        totals: {$ref: '#/components/schemas/OrderTotals'}
+        couponCode: {type: [string, 'null']}
+        history:
+          type: array
+          items: {$ref: '#/components/schemas/OrderHistoryEntry'}
+        placedAt: {type: [string, 'null'], format: date-time}
+    PaymobTransaction:
+      type: object
+      description: The `obj` of a Paymob TRANSACTION callback (only the fields used are listed).
+      additionalProperties: true
+      properties:
+        id: {type: integer}
+        amount_cents: {type: integer, description: Piasters; must equal the stored payment amount.}
+        created_at: {type: string}
+        currency: {type: string, example: EGP}
+        error_occured: {type: boolean}
+        has_parent_transaction: {type: boolean}
+        integration_id: {type: integer}
+        is_3d_secure: {type: boolean}
+        is_auth: {type: boolean}
+        is_capture: {type: boolean}
+        is_refunded: {type: boolean}
+        is_standalone_payment: {type: boolean}
+        is_voided: {type: boolean}
+        owner: {type: integer}
+        pending: {type: boolean}
+        success: {type: boolean}
+        order:
+          type: object
+          properties:
+            id: {type: integer}
+            merchant_order_id: {type: string, description: Midad gateway reference.}
+        source_data:
+          type: object
+          properties:
+            pan: {type: string}
+            sub_type: {type: string}
+            type: {type: string}
+
+    # ── account
+    AddressInput:
+      type: object
+      required: [governorate_id, recipient_name, phone, city, street]
+      properties:
+        governorate_id: {type: integer}
+        recipient_name: {type: string, maxLength: 120}
+        phone: {$ref: '#/components/schemas/PhoneInput'}
+        city: {type: string, maxLength: 80}
+        street: {type: string, maxLength: 160}
+        building: {type: [string, 'null'], maxLength: 40}
+        floor: {type: [string, 'null'], maxLength: 20}
+        apartment: {type: [string, 'null'], maxLength: 20}
+        landmark: {type: [string, 'null'], maxLength: 160}
+        is_default: {type: boolean}
+    Address:
+      type: object
+      description: |
+        A raw Eloquent model (no Resource): snake_case keys, timestamps, and the nested raw Governorate model.
+        Unlike every other endpoint, its money field is in **piasters** (`governorate.shipping_fee_piasters`).
+      properties:
+        id: {type: integer}
+        user_id: {type: integer}
+        governorate_id: {type: integer}
+        recipient_name: {type: string}
+        phone: {type: string}
+        city: {type: string}
+        street: {type: string}
+        building: {type: [string, 'null']}
+        floor: {type: [string, 'null']}
+        apartment: {type: [string, 'null']}
+        landmark: {type: [string, 'null']}
+        is_default: {type: boolean}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        governorate:
+          type: object
+          properties:
+            id: {type: integer}
+            name: {type: string}
+            shipping_fee_piasters: {type: integer}
+            delivery_days_min: {type: integer}
+            delivery_days_max: {type: integer}
+            is_active: {type: boolean}
+            sort: {type: integer}
+            created_at: {type: [string, 'null'], format: date-time}
+            updated_at: {type: [string, 'null'], format: date-time}
+
+    # ── admin: dashboard & reports
+    Dashboard:
+      type: object
+      properties:
+        today:
+          type: object
+          properties:
+            orders: {type: integer}
+            sales: {$ref: '#/components/schemas/Money'}
+        week:
+          type: object
+          properties:
+            orders: {type: integer}
+            sales: {$ref: '#/components/schemas/Money'}
+        toConfirm: {type: integer, description: Orders in `placed`.}
+        toShip: {type: integer, description: Orders in `confirmed` or `preparing`.}
+        awaitingPayment: {type: integer}
+        lowStock: {type: integer}
+        latest:
+          type: array
+          maxItems: 8
+          items:
+            type: object
+            properties:
+              number: {type: string}
+              customer: {type: string}
+              status: {$ref: '#/components/schemas/OrderStatus'}
+              total: {$ref: '#/components/schemas/Money'}
+              at: {type: string, format: date-time}
+        activity:
+          type: array
+          maxItems: 8
+          items:
+            type: object
+            properties:
+              who: {type: [string, 'null']}
+              action: {type: string, example: POST api/admin/orders/MD-1001/status}
+              at: {type: string, format: date-time}
+    Report:
+      type: object
+      properties:
+        from: {type: string, format: date}
+        to: {type: string, format: date}
+        totals:
+          type: object
+          properties:
+            orders: {type: integer}
+            sales: {$ref: '#/components/schemas/Money'}
+            average: {$ref: '#/components/schemas/Money'}
+        daily:
+          type: array
+          description: One entry per day in the range, zero-filled.
+          items:
+            type: object
+            properties:
+              date: {type: string, format: date}
+              orders: {type: integer}
+              sales: {$ref: '#/components/schemas/Money'}
+        topProducts:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              ml: {type: integer}
+              qty: {type: integer}
+              total: {$ref: '#/components/schemas/Money'}
+        governorates:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              orders: {type: integer}
+              sales: {$ref: '#/components/schemas/Money'}
+        paymentMethods:
+          type: array
+          items:
+            type: object
+            properties:
+              method: {$ref: '#/components/schemas/PaymentMethod'}
+              orders: {type: integer}
+              sales: {$ref: '#/components/schemas/Money'}
+
+    # ── admin: orders
+    AdminOrderRow:
+      type: object
+      properties:
+        number: {type: string}
+        status: {$ref: '#/components/schemas/OrderStatus'}
+        statusLabel: {type: string}
+        customer: {type: string}
+        phone: {type: string}
+        governorate: {type: [string, 'null']}
+        paymentMethod: {$ref: '#/components/schemas/PaymentMethod'}
+        paymentStatus: {$ref: '#/components/schemas/PaymentStatus'}
+        total: {$ref: '#/components/schemas/Money'}
+        items: {type: integer, description: Number of order lines.}
+        createdAt: {type: string, format: date-time}
+    AdminOrder:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          properties:
+            email: {type: [string, 'null']}
+            customerNote: {type: [string, 'null']}
+            internalNote: {type: [string, 'null']}
+            allowed:
+              type: array
+              description: Statuses this order may move to next.
+              items: {$ref: '#/components/schemas/OrderStatus'}
+            payments:
+              type: array
+              items:
+                type: object
+                properties:
+                  gateway: {type: string, enum: [paymob, fake]}
+                  reference: {type: string}
+                  transactionId: {type: [string, 'null']}
+                  amount: {$ref: '#/components/schemas/Money'}
+                  status: {type: string, enum: [pending, paid, failed, refunded]}
+                  at: {type: [string, 'null'], format: date-time}
+            history:
+              type: array
+              description: Replaces the base `history` with the actor and note.
+              items:
+                type: object
+                properties:
+                  status: {$ref: '#/components/schemas/OrderStatus'}
+                  label: {type: string}
+                  note: {type: [string, 'null']}
+                  by: {type: [string, 'null']}
+                  at: {type: [string, 'null'], format: date-time}
+            account:
+              type: [object, 'null']
+              properties:
+                id: {type: integer}
+                name: {type: string}
+
+    # ── admin: products
+    AdminVariantRow:
+      type: object
+      properties:
+        id: {type: integer}
+        ml: {type: integer}
+        price: {$ref: '#/components/schemas/Money'}
+        stock: {type: integer}
+        reserved: {type: integer}
+        low: {type: boolean}
+        active: {type: boolean}
+    AdminProductRow:
+      type: object
+      properties:
+        id: {type: integer}
+        slug: {type: string}
+        name: {type: string}
+        latin: {type: string}
+        inspiredBy: {type: [string, 'null']}
+        category: {type: [string, 'null'], description: Category **name** (the storefront Product uses the slug).}
+        categoryId: {type: integer}
+        active: {type: boolean}
+        soldCount: {type: integer}
+        image: {type: [string, 'null'], description: '`/storage/...` URL of the first image (a plain string, unlike the storefront Image object).'}
+        variants:
+          type: array
+          description: All variants, including inactive ones.
+          items: {$ref: '#/components/schemas/AdminVariantRow'}
+    AdminProduct:
+      allOf:
+        - $ref: '#/components/schemas/AdminProductRow'
+        - type: object
+          properties:
+            description: {type: [string, 'null']}
+            signature: {type: [string, 'null']}
+            concentration: {type: [string, 'null']}
+            sort: {type: integer}
+            notes:
+              type: array
+              items: {type: string}
+            pyramid:
+              type: object
+              description: Always an object here (empty arrays when unset).
+              properties:
+                top: {type: array, items: {type: string}}
+                heart: {type: array, items: {type: string}}
+                base: {type: array, items: {type: string}}
+            images:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: {type: integer}
+                  url: {type: string}
+                  alt: {type: [string, 'null']}
+            variants:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: {type: integer}
+                  ml: {type: integer}
+                  sku: {type: string, example: MD-ROYALOUD-50-X7K}
+                  price: {$ref: '#/components/schemas/Money'}
+                  compareAt: {$ref: '#/components/schemas/MoneyNullable'}
+                  stock: {type: integer}
+                  reserved: {type: integer}
+                  available: {type: integer}
+                  lowThreshold: {type: integer}
+                  active: {type: boolean}
+    AdminProductInput:
+      type: object
+      required: [category_id, name, latin_name, variants]
+      properties:
+        category_id: {type: integer}
+        name: {type: string, maxLength: 120, example: عود ملكي}
+        latin_name: {type: string, maxLength: 120, example: Royal Oud}
+        inspired_by: {type: [string, 'null'], maxLength: 120}
+        signature_note: {type: [string, 'null'], maxLength: 120}
+        description: {type: [string, 'null'], maxLength: 3000}
+        concentration: {type: [string, 'null'], maxLength: 32, default: EAU DE PARFUM}
+        is_active: {type: boolean}
+        sort: {type: [integer, 'null'], minimum: 0, maximum: 9999}
+        variants:
+          type: array
+          minItems: 1
+          maxItems: 4
+          description: '`size_ml` values must be distinct.'
+          items:
+            type: object
+            required: [size_ml, price]
+            properties:
+              size_ml: {type: integer, enum: [10, 30, 50, 100]}
+              price: {type: number, minimum: 1, maximum: 100000, description: EGP.}
+              compare_at: {type: [number, 'null'], maximum: 100000, description: EGP; must be greater than price.}
+              stock: {type: [integer, 'null'], minimum: 0, maximum: 100000, description: Starting stock; only used when creating the product.}
+              low_stock_threshold: {type: [integer, 'null'], minimum: 0, maximum: 1000, default: 5}
+              is_active: {type: boolean, default: true}
+        notes:
+          type: array
+          maxItems: 20
+          description: Key notes by name; unknown notes are created.
+          items: {type: string, maxLength: 64}
+        pyramid:
+          type: object
+          properties:
+            top: {type: array, maxItems: 8, items: {type: string, maxLength: 64}}
+            heart: {type: array, maxItems: 8, items: {type: string, maxLength: 64}}
+            base: {type: array, maxItems: 8, items: {type: string, maxLength: 64}}
+    LowStockRow:
+      type: object
+      properties:
+        variantId: {type: integer}
+        product: {type: [string, 'null']}
+        slug: {type: [string, 'null']}
+        ml: {type: integer}
+        available: {type: integer}
+        threshold: {type: integer}
+    StockMovement:
+      type: object
+      properties:
+        change: {type: integer}
+        reason: {type: string, description: 'restock | adjustment | damage | sale | ... (order-driven reasons are written by OrderStatusService).'}
+        note: {type: [string, 'null']}
+        orderId: {type: [integer, 'null']}
+        at: {type: string, format: date-time}
+
+    # ── admin: store
+    AdminSpotlight:
+      type: object
+      properties:
+        id: {type: integer}
+        categoryId: {type: integer}
+        productId: {type: integer}
+        product: {type: [string, 'null'], description: Product name.}
+        tagline: {type: string}
+        palette: {$ref: '#/components/schemas/Palette'}
+        texture: {$ref: '#/components/schemas/Texture'}
+        ingredients:
+          type: array
+          items: {$ref: '#/components/schemas/Ingredient'}
+        sample: {type: boolean}
+        active: {type: boolean}
+        startsAt: {type: [string, 'null'], format: date-time}
+        endsAt: {type: [string, 'null'], format: date-time}
+        pyramid: {$ref: '#/components/schemas/Pyramid'}
+    SpotlightInput:
+      type: object
+      required: [category_id, product_id, tagline, palette, texture]
+      properties:
+        category_id: {type: integer}
+        product_id: {type: integer, description: Must be a non-deleted product in `category_id`.}
+        tagline: {type: string, maxLength: 200}
+        palette: {$ref: '#/components/schemas/Palette'}
+        texture: {$ref: '#/components/schemas/Texture'}
+        ingredients:
+          type: array
+          maxItems: 4
+          uniqueItems: true
+          items: {$ref: '#/components/schemas/Ingredient'}
+        is_active: {type: boolean}
+        starts_at: {type: [string, 'null'], format: date}
+        ends_at: {type: [string, 'null'], format: date, description: After starts_at.}
+    AdminCategory:
+      type: object
+      properties:
+        id: {type: integer}
+        slug: {type: string}
+        name: {type: string}
+        latin: {type: [string, 'null']}
+        description: {type: [string, 'null']}
+        active: {type: boolean}
+        sort: {type: integer}
+        products: {type: integer, description: Count of all (non-deleted) products.}
+        spotlights:
+          type: array
+          items: {$ref: '#/components/schemas/AdminSpotlight'}
+    AdminGovernorate:
+      type: object
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        fee: {$ref: '#/components/schemas/Money'}
+        daysMin: {type: integer}
+        daysMax: {type: integer}
+        active: {type: boolean}
+    Settings:
+      type: object
+      properties:
+        announcements:
+          type: array
+          items: {type: string}
+        freeShippingThreshold: {$ref: '#/components/schemas/Money'}
+        discoveryPrice: {$ref: '#/components/schemas/Money'}
+        discoveryCreditDays: {type: integer, default: 60}
+        giftWrapFee: {$ref: '#/components/schemas/Money'}
+        reservationMinutes: {type: integer, default: 30}
+        whatsapp: {type: string, description: Empty string when unset.}
+    AdminFinderQuestion:
+      type: object
+      properties:
+        id: {type: integer}
+        key: {type: string}
+        question: {type: string}
+        answers:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: integer}
+              value: {type: string}
+              label: {type: string}
+              categories:
+                description: Category slug -> weight. Serialized as `[]` (an empty JSON array) when there are no category weights.
+                oneOf:
+                  - type: object
+                    additionalProperties: {type: integer}
+                  - type: array
+                    maxItems: 0
+              notes:
+                type: array
+                items: {type: string}
+
+    # ── admin: coupons
+    Coupon:
+      type: object
+      properties:
+        id: {type: integer}
+        code: {type: string, example: MIDAD10}
+        type: {type: string, enum: [percent, fixed, free_shipping]}
+        kind: {type: string, enum: [general, discovery_credit]}
+        label: {type: string, example: خصم 10٪}
+        value: {type: number, description: Whole percent for `percent`; EGP for `fixed`; 0 for `free_shipping`.}
+        minSubtotal: {$ref: '#/components/schemas/Money'}
+        maxDiscount: {$ref: '#/components/schemas/MoneyNullable'}
+        usageLimit: {type: [integer, 'null']}
+        perCustomerLimit: {type: [integer, 'null']}
+        used: {type: integer}
+        discountGiven: {$ref: '#/components/schemas/Money'}
+        phone: {type: [string, 'null'], description: Bound phone (discovery credits).}
+        startsAt: {type: [string, 'null'], format: date}
+        endsAt: {type: [string, 'null'], format: date}
+        active: {type: boolean}
+    CouponInput:
+      type: object
+      required: [code, type]
+      properties:
+        code: {type: string, maxLength: 40, pattern: '^[A-Za-z0-9_-]+$', description: Unique; stored uppercase.}
+        type: {type: string, enum: [percent, fixed, free_shipping]}
+        value: {type: [number, 'null'], minimum: 0, description: 'Required unless free_shipping. Percent: max 90 (truncated to an integer). Fixed: EGP, max 100000.'}
+        min_subtotal: {type: [number, 'null'], minimum: 0, description: EGP.}
+        max_discount: {type: [number, 'null'], minimum: 0, description: EGP.}
+        usage_limit: {type: [integer, 'null'], minimum: 1}
+        per_customer_limit: {type: [integer, 'null'], minimum: 1}
+        starts_at: {type: [string, 'null'], format: date}
+        ends_at: {type: [string, 'null'], format: date, description: After starts_at.}
+        is_active: {type: boolean, default: true}
+
+    # ── admin: customers
+    CustomerRow:
+      type: object
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        email: {type: string}
+        phone: {type: [string, 'null']}
+        orders: {type: integer}
+        spent: {$ref: '#/components/schemas/Money'}
+        joinedAt: {type: string, format: date}
+    CustomerDetail:
+      type: object
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        email: {type: string}
+        phone: {type: [string, 'null']}
+        joinedAt: {type: string, format: date}
+        addresses:
+          type: array
+          description: One-line addresses.
+          items: {type: string}
+          example: [القاهرة، مدينة نصر، شارع عباس العقاد]
+        orders:
+          type: array
+          items:
+            type: object
+            properties:
+              number: {type: string}
+              status: {type: string, description: 'The Arabic status **label**, not the status code.', example: تم التوصيل}
+              total: {$ref: '#/components/schemas/Money'}
+              at: {type: string, format: date}

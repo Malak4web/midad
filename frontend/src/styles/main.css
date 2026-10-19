@@ -1,0 +1,136 @@
+@import 'tailwindcss';
+
+@import '@fontsource/amiri/arabic-400.css';
+@import '@fontsource/amiri/arabic-700.css';
+@import '@fontsource/amiri/latin-400.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-300.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-400.css';
+@import '@fontsource/ibm-plex-sans-arabic/arabic-500.css';
+@import '@fontsource/ibm-plex-sans-arabic/latin-400.css';
+@import '@fontsource/ibm-plex-sans-arabic/latin-500.css';
+@import '@fontsource/cinzel/latin-400.css';
+@import '@fontsource/cinzel/latin-500.css';
+
+/* Midad brand tokens (Midad-Brand-Guidelines.pdf p.10–11), laid out as a bento:
+   ivory page, paper tiles framed in a gold hairline like the bottle's label, ink,
+   and the sand family that tells the scent families apart. */
+@theme {
+  --color-ink: #0e0d0c;
+  --color-smoke: #3b342c;
+  --color-smoke-deep: #2c2620;
+  --color-gold: #b08d57;
+  --color-gold-light: #d6b77e;
+  --color-gold-ink: #765a30; /* gold for text on ivory/paper: 5.4:1 (the brand gold is 2.6:1) */
+  --color-ivory: #f2eadb; /* the page */
+  --color-paper: #fbf7ee; /* tiles */
+  --color-sand: #d8cab0;
+  --color-sand-light: #e8dcc4;
+  --color-sand-deep: #c9b48e;
+  --color-linen: #eadfc9;
+  --color-lead: #3d362e;
+  --color-muted: #5f564b;
+  --color-muted-light: #a89c8a;
+  --color-danger: #a0462e;
+
+  --font-display: 'Amiri', 'Traditional Arabic', serif;
+  --font-sans: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+  --font-latin: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --font-meta: 'IBM Plex Sans Arabic', 'Segoe UI', Arial, sans-serif;
+
+  --radius-tile: 24px;
+  --ease-ink: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --foil: linear-gradient(100deg, #9a7440 0%, #f3dda6 28%, #be9455 50%, #f8e8bc 72%, #a27d43 100%);
+}
+
+@layer base {
+  html {
+    background: var(--color-ivory);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    /* FE-50: keep state changes, drop the travel */
+    *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  }
+  body { margin: 0; line-height: 1.7; }
+  h1, h2, h3, h4 { text-wrap: balance; }
+  ::selection { background: var(--color-gold-light); color: var(--color-ink); }
+  /* two-tone ring: the ink line reads on ivory (17:1), the gold edges on ink and
+     on every spotlight colour, so focus never depends on what is behind it */
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 6px var(--color-gold-light);
+    border-radius: 12px;
+  }
+  :root { color-scheme: light; accent-color: var(--color-ink); -webkit-tap-highlight-color: transparent; }
+  input, textarea { caret-color: var(--color-gold); }
+  /* the native blue clear button of search fields is off-brand; the field clears with the keyboard */
+  input[type='search']::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+  a { text-underline-offset: 0.3em; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--color-ivory); }
+  ::-webkit-scrollbar-thumb { background: var(--color-sand); border-radius: 10px; border: 2px solid var(--color-ivory); }
+  html { scrollbar-color: var(--color-sand) var(--color-ivory); }
+}
+
+@layer utilities {
+  /* phone: a row of chips that scrolls sideways, edge to edge, instead of wrapping */
+  @media (max-width: 1023px) {
+    .rail {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin-inline: calc(-1 * clamp(16px, 4vw, 48px));
+      padding-inline: clamp(16px, 4vw, 48px);
+      scrollbar-width: none;
+      scroll-snap-type: inline proximity;
+      overscroll-behavior-inline: contain;
+    }
+    .rail::-webkit-scrollbar { display: none; }
+    .rail > * { flex-shrink: 0; scroll-snap-align: start; }
+  }
+  .container-midad {
+    width: 100%;
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: clamp(16px, 4vw, 48px);
+  }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .sr-only-focusable:not(:focus) {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+}
+
+/* the bento world's building blocks */
+@layer components {
+  /* a white rounded tile on the cream page */
+  .tile { background: var(--color-paper); border-radius: var(--radius-tile); }
+  /* the main button: a warm-black pill */
+  .btn-pill {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    min-height: 52px; padding: 0 26px; border-radius: 999px;
+    background: var(--color-ink); color: var(--color-gold-light);
+    font-weight: 500; font-size: 1rem; text-decoration: none;
+    transition: transform 0.2s var(--ease-pop), background 0.2s;
+  }
+  .btn-pill:hover { transform: translateY(-2px); }
+  .btn-pill:active { transform: scale(0.97); }
+  .btn-pill:disabled { opacity: 0.5; transform: none; }
+  .btn-pill.is-light { background: transparent; color: inherit; box-shadow: inset 0 0 0 1px currentColor; }
+  .btn-pill.is-gold { background: var(--color-gold-light); color: var(--color-ink); }
+  /* the label's frame: a gold hairline inset in a tile */
+  .framed { position: relative; }
+  .framed::before { content: ''; position: absolute; inset: 8px; border: 1px solid rgba(176, 141, 87, 0.55); border-radius: calc(var(--radius-tile) - 6px); pointer-events: none; z-index: 3; }
+  /* gold foil on headlines over ink */
+  .foil { background: var(--foil); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-box-decoration-break: clone; box-decoration-break: clone; padding-top: 0.1em; }
+  /* a small round icon button */
+  .btn-round { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 999px; background: var(--color-ink); color: var(--color-gold-light); transition: transform 0.2s var(--ease-pop); }
+  .btn-round:hover { transform: scale(1.06); }
+  /* a soft chip */
+  .chip-soft { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: var(--color-paper); font-size: 0.8125rem; }
+}

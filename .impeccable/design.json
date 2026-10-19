@@ -1,0 +1,502 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-17T10:32:40.285Z",
+  "title": "Design System: Midad",
+  "extensions": {
+    "colorMeta": {
+      "midad-black": {
+        "role": "primary",
+        "displayName": "Midad Black",
+        "canonical": "#0e0d0c",
+        "oklch": "oklch(16% 0.0027 67.6)",
+        "tonalRamp": [
+          "oklch(15% 0.0027 67.6)",
+          "oklch(26% 0.0027 67.6)",
+          "oklch(37% 0.0027 67.6)",
+          "oklch(48% 0.0027 67.6)",
+          "oklch(59% 0.0027 67.6)",
+          "oklch(70% 0.0027 67.6)",
+          "oklch(82% 0.0027 67.6)",
+          "oklch(95% 0.0013 67.6)"
+        ]
+      },
+      "gold-leaf": {
+        "role": "primary",
+        "displayName": "Gold Leaf",
+        "canonical": "#b08d57",
+        "oklch": "oklch(66.4% 0.0831 77.4)",
+        "tonalRamp": [
+          "oklch(15% 0.0831 77.4)",
+          "oklch(26% 0.0831 77.4)",
+          "oklch(37% 0.0831 77.4)",
+          "oklch(48% 0.0831 77.4)",
+          "oklch(59% 0.0831 77.4)",
+          "oklch(70% 0.0831 77.4)",
+          "oklch(82% 0.0831 77.4)",
+          "oklch(95% 0.0416 77.4)"
+        ]
+      },
+      "light-gold": {
+        "role": "primary",
+        "displayName": "Light Gold",
+        "canonical": "#d6b77e",
+        "oklch": "oklch(79.3% 0.0823 82.2)",
+        "tonalRamp": [
+          "oklch(15% 0.0823 82.2)",
+          "oklch(26% 0.0823 82.2)",
+          "oklch(37% 0.0823 82.2)",
+          "oklch(48% 0.0823 82.2)",
+          "oklch(59% 0.0823 82.2)",
+          "oklch(70% 0.0823 82.2)",
+          "oklch(82% 0.0823 82.2)",
+          "oklch(95% 0.0411 82.2)"
+        ]
+      },
+      "parchment-ivory": {
+        "role": "neutral",
+        "displayName": "Parchment Ivory",
+        "canonical": "#f2eadb",
+        "oklch": "oklch(93.9% 0.0217 83.3)",
+        "tonalRamp": [
+          "oklch(15% 0.0217 83.3)",
+          "oklch(26% 0.0217 83.3)",
+          "oklch(37% 0.0217 83.3)",
+          "oklch(48% 0.0217 83.3)",
+          "oklch(59% 0.0217 83.3)",
+          "oklch(70% 0.0217 83.3)",
+          "oklch(82% 0.0217 83.3)",
+          "oklch(95% 0.0109 83.3)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#f8f3e8",
+        "oklch": "oklch(96.5% 0.0155 86.4)",
+        "tonalRamp": [
+          "oklch(15% 0.0155 86.4)",
+          "oklch(26% 0.0155 86.4)",
+          "oklch(37% 0.0155 86.4)",
+          "oklch(48% 0.0155 86.4)",
+          "oklch(59% 0.0155 86.4)",
+          "oklch(70% 0.0155 86.4)",
+          "oklch(82% 0.0155 86.4)",
+          "oklch(95% 0.0078 86.4)"
+        ]
+      },
+      "sand": {
+        "role": "neutral",
+        "displayName": "Sand",
+        "canonical": "#d8cab0",
+        "oklch": "oklch(84.4% 0.0384 83)",
+        "tonalRamp": [
+          "oklch(15% 0.0384 83)",
+          "oklch(26% 0.0384 83)",
+          "oklch(37% 0.0384 83)",
+          "oklch(48% 0.0384 83)",
+          "oklch(59% 0.0384 83)",
+          "oklch(70% 0.0384 83)",
+          "oklch(82% 0.0384 83)",
+          "oklch(95% 0.0192 83)"
+        ]
+      },
+      "smoked-glass": {
+        "role": "neutral",
+        "displayName": "Smoked Glass",
+        "canonical": "#3b342c",
+        "oklch": "oklch(33% 0.0169 70.9)",
+        "tonalRamp": [
+          "oklch(15% 0.0169 70.9)",
+          "oklch(26% 0.0169 70.9)",
+          "oklch(37% 0.0169 70.9)",
+          "oklch(48% 0.0169 70.9)",
+          "oklch(59% 0.0169 70.9)",
+          "oklch(70% 0.0169 70.9)",
+          "oklch(82% 0.0169 70.9)",
+          "oklch(95% 0.0085 70.9)"
+        ]
+      },
+      "smoked-glass-deep": {
+        "role": "neutral",
+        "displayName": "Smoked Glass Deep",
+        "canonical": "#2c2620",
+        "oklch": "oklch(27.3% 0.014 67.2)",
+        "tonalRamp": [
+          "oklch(15% 0.014 67.2)",
+          "oklch(26% 0.014 67.2)",
+          "oklch(37% 0.014 67.2)",
+          "oklch(48% 0.014 67.2)",
+          "oklch(59% 0.014 67.2)",
+          "oklch(70% 0.014 67.2)",
+          "oklch(82% 0.014 67.2)",
+          "oklch(95% 0.007 67.2)"
+        ]
+      },
+      "lead-smoke": {
+        "role": "neutral",
+        "displayName": "Lead Smoke",
+        "canonical": "#3d362e",
+        "oklch": "oklch(33.8% 0.0168 70.9)",
+        "tonalRamp": [
+          "oklch(15% 0.0168 70.9)",
+          "oklch(26% 0.0168 70.9)",
+          "oklch(37% 0.0168 70.9)",
+          "oklch(48% 0.0168 70.9)",
+          "oklch(59% 0.0168 70.9)",
+          "oklch(70% 0.0168 70.9)",
+          "oklch(82% 0.0168 70.9)",
+          "oklch(95% 0.0084 70.9)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "#5f564b",
+        "oklch": "oklch(45.8% 0.021 72.8)",
+        "tonalRamp": [
+          "oklch(15% 0.021 72.8)",
+          "oklch(26% 0.021 72.8)",
+          "oklch(37% 0.021 72.8)",
+          "oklch(48% 0.021 72.8)",
+          "oklch(59% 0.021 72.8)",
+          "oklch(70% 0.021 72.8)",
+          "oklch(82% 0.021 72.8)",
+          "oklch(95% 0.0105 72.8)"
+        ]
+      },
+      "muted-light": {
+        "role": "neutral",
+        "displayName": "Muted Light",
+        "canonical": "#a89c8a",
+        "oklch": "oklch(69.8% 0.0292 78.1)",
+        "tonalRamp": [
+          "oklch(15% 0.0292 78.1)",
+          "oklch(26% 0.0292 78.1)",
+          "oklch(37% 0.0292 78.1)",
+          "oklch(48% 0.0292 78.1)",
+          "oklch(59% 0.0292 78.1)",
+          "oklch(70% 0.0292 78.1)",
+          "oklch(82% 0.0292 78.1)",
+          "oklch(95% 0.0146 78.1)"
+        ]
+      },
+      "danger": {
+        "role": "neutral",
+        "displayName": "Danger",
+        "canonical": "#a0462e",
+        "oklch": "oklch(50.7% 0.1257 35.9)",
+        "tonalRamp": [
+          "oklch(15% 0.1257 35.9)",
+          "oklch(26% 0.1257 35.9)",
+          "oklch(37% 0.1257 35.9)",
+          "oklch(48% 0.1257 35.9)",
+          "oklch(59% 0.1257 35.9)",
+          "oklch(70% 0.1257 35.9)",
+          "oklch(82% 0.1257 35.9)",
+          "oklch(95% 0.0629 35.9)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero headline; the featured perfume's name in a spotlight at 1.02 leading."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Band titles (category names, discovery, finder, gift); scales up to clamp(3rem, 7vw, 5.5rem)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Product-card names; slider titles use Amiri 400 at 1.75rem."
+      },
+      "tagline": {
+        "displayName": "Tagline",
+        "purpose": "A perfume's one-line sentence; scent-pyramid notes at 1.375rem."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default Arabic text and button labels."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "Paragraph under a band title, 38-40ch, in Lead Smoke on light bands."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Nav, 'inspired by' lines, captions, legends, footer links (0.8125-0.9375rem)."
+      },
+      "latin-caps": {
+        "displayName": "Latin Caps (Cinzel)",
+        "purpose": "Perfume Latin names and the MIDAD wordmark only; uppercase, tracked 0.18-0.34em."
+      },
+      "data": {
+        "displayName": "Data (Montserrat)",
+        "purpose": "Small Latin data: size captions, TOP/HEART/BASE, step numerals, cart count. The only place Latin digits appear."
+      }
+    },
+    "shadows": [
+      {
+        "name": "bottle-cast",
+        "value": "drop-shadow(0 22px 22px rgba(0,0,0,.55))",
+        "purpose": "Filter on every drawn bottle on a stage; spotlights use 0 26px 22px rgba(0,0,0,.45)."
+      },
+      {
+        "name": "floating-sheet",
+        "value": "0 18px 40px -20px rgba(14,13,12,.45)",
+        "purpose": "Search dropdown."
+      },
+      {
+        "name": "toast",
+        "value": "0 12px 30px -12px rgba(14,13,12,.6)",
+        "purpose": "Ink toasts."
+      },
+      {
+        "name": "drawer",
+        "value": "0 0 60px rgba(14,13,12,.35)",
+        "purpose": "Cart drawer over a 50% ink scrim."
+      },
+      {
+        "name": "laid-paper",
+        "value": "0 34px 50px -28px rgba(14,13,12,.55)",
+        "purpose": "Physical objects drawn on a band: gift card, discovery box."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-ink",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Object motion: bottle lift on card hover (500ms), discovery slot nudge (400ms)."
+      },
+      {
+        "name": "duration-state",
+        "value": "200ms",
+        "purpose": "Colour and border state transitions on buttons, chips, slider buttons."
+      },
+      {
+        "name": "duration-underline",
+        "value": "300ms",
+        "purpose": "Gold nav underline drawn from the right."
+      },
+      {
+        "name": "ink-line",
+        "value": "scroll-linked; reveals to 82% of viewport height; never rewinds",
+        "purpose": "The page's single authored motion; shown complete and static under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ],
+    "perfumeWorld": {
+      "roles": [
+        "bg",
+        "surface",
+        "fg",
+        "muted",
+        "accent"
+      ],
+      "contrast": {
+        "fgOnBg": 4.5,
+        "mutedOnBg": 3,
+        "fallbacks": [
+          "#0E0D0C",
+          "#F2EADB"
+        ]
+      },
+      "textures": [
+        "resin",
+        "petals",
+        "smoke",
+        "plain"
+      ],
+      "fallbackPalette": {
+        "bg": "#3B342C",
+        "surface": "#4A4137",
+        "fg": "#F2EADB",
+        "muted": "#CFC4B2",
+        "accent": "#D6B77E"
+      }
+    },
+    "inkLine": {
+      "stroke": "#C9A365",
+      "width": 1.3,
+      "pressedWidth": 3.2,
+      "mark": {
+        "fill": "#D6B77E",
+        "size": 10,
+        "rotate": 18
+      },
+      "nib": {
+        "fill": "#E6CB93",
+        "size": 8
+      }
+    },
+    "waves": {
+      "height": "clamp(44px, 7vw, 96px)",
+      "fill": "next band's background",
+      "distinctShapes": 7
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default call to action on light bands: square ink block, ivory label.",
+      "html": "<button class=\"ds-btn-primary\">اختر عيّناتك <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M19 12H5M11 6l-6 6 6 6\"/></svg></button>",
+      "css": ":host{--color-ink:#0e0d0c;--color-smoke:#3b342c;--color-gold:#b08d57;--color-gold-light:#d6b77e;--color-ivory:#f2eadb;--color-paper:#f8f3e8;--color-sand:#d8cab0;--color-muted:#5f564b;--ease-ink:cubic-bezier(0.16,1,0.3,1)} .ds-btn-primary{display:inline-flex;align-items:center;gap:12px;background:var(--color-ink);color:var(--color-ivory);padding:14px 28px;font:400 1rem/1.5 'IBM Plex Sans Arabic',sans-serif;border:0;border-radius:0;cursor:pointer;transition:background-color .2s} .ds-btn-primary:hover{background:var(--color-smoke)} .ds-btn-primary:focus-visible{outline:2px solid var(--color-gold);outline-offset:3px}"
+    },
+    {
+      "name": "Gold Button (on ink)",
+      "kind": "button",
+      "refersTo": "button-gold",
+      "description": "The single gold-filled CTA, used on the ink hero only.",
+      "html": "<div class=\"ds-ink\"><button class=\"ds-btn-gold\">تسوّق العطور</button></div>",
+      "css": ":host{--color-ink:#0e0d0c;--color-smoke:#3b342c;--color-gold:#b08d57;--color-gold-light:#d6b77e;--color-ivory:#f2eadb;--color-paper:#f8f3e8;--color-sand:#d8cab0;--color-muted:#5f564b;--ease-ink:cubic-bezier(0.16,1,0.3,1)} .ds-ink{background:var(--color-ink);padding:24px;direction:rtl} .ds-btn-gold{background:var(--color-gold-light);color:var(--color-ink);padding:14px 28px;font:500 1rem/1.5 'IBM Plex Sans Arabic',sans-serif;border:0;border-radius:0;cursor:pointer;transition:background-color .2s} .ds-btn-gold:hover{background:#e4c891} .ds-btn-gold:focus-visible{outline:2px solid var(--color-gold);outline-offset:3px}"
+    },
+    {
+      "name": "Ghost Button (on ink)",
+      "kind": "button",
+      "refersTo": "button-ghost-on-ink",
+      "description": "Secondary action on ink: transparent with a sand hairline that turns light gold.",
+      "html": "<div class=\"ds-ink\"><button class=\"ds-btn-ghost\">ساعدني أختار</button></div>",
+      "css": ":host{--color-ink:#0e0d0c;--color-smoke:#3b342c;--color-gold:#b08d57;--color-gold-light:#d6b77e;--color-ivory:#f2eadb;--color-paper:#f8f3e8;--color-sand:#d8cab0;--color-muted:#5f564b;--ease-ink:cubic-bezier(0.16,1,0.3,1)} .ds-ink{background:var(--color-ink);padding:24px;direction:rtl} .ds-btn-ghost{background:transparent;color:var(--color-ivory);padding:14px 28px;font:400 1rem/1.5 'IBM Plex Sans Arabic',sans-serif;border:1px solid rgba(216,202,176,.5);border-radius:0;cursor:pointer;transition:border-color .2s} .ds-btn-ghost:hover{border-color:var(--color-gold-light)} .ds-btn-ghost:focus-visible{outline:2px solid var(--color-gold);outline-offset:3px}"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Pill answer or suggestion; selected fills ink.",
+      "html": "<div class=\"ds-row\"><button class=\"ds-chip\">منعش</button><button class=\"ds-chip is-on\">دافئ</button></div>",
+      "css": ":host{--color-ink:#0e0d0c;--color-smoke:#3b342c;--color-gold:#b08d57;--color-gold-light:#d6b77e;--color-ivory:#f2eadb;--color-paper:#f8f3e8;--color-sand:#d8cab0;--color-muted:#5f564b;--ease-ink:cubic-bezier(0.16,1,0.3,1)} .ds-row{display:flex;gap:8px;direction:rtl} .ds-chip{background:transparent;color:var(--color-ink);border:1px solid rgba(14,13,12,.25);border-radius:9999px;padding:8px 16px;font:400 .9375rem/1.4 'IBM Plex Sans Arabic',sans-serif;cursor:pointer;transition:background-color .2s,border-color .2s,color .2s} .ds-chip:hover{border-color:var(--color-ink)} .ds-chip.is-on{background:var(--color-ink);color:var(--color-ivory);border-color:var(--color-ink)} .ds-chip:focus-visible{outline:2px solid var(--color-gold);outline-offset:2px}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Paper field with a sand hairline; the border turns gold on focus.",
+      "html": "<label class=\"ds-search\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"><circle cx=\"11\" cy=\"11\" r=\"6.5\"/><path d=\"M20 20l-4.2-4.2\"/></svg><input placeholder=\"ابحث باسم العطر أو الأصلي\"></label>",
+      "css": ":host{--color-ink:#0e0d0c;--color-smoke:#3b342c;--color-gold:#b08d57;--color-gold-light:#d6b77e;--color-ivory:#f2eadb;--color-paper:#f8f3e8;--color-sand:#d8cab0;--color-muted:#5f564b;--ease-ink:cubic-bezier(0.16,1,0.3,1)} .ds-search{display:flex;align-items:center;gap:8px;direction:rtl;border:1px solid var(--color-sand);background:var(--color-paper);padding:0 12px;color:var(--color-muted);transition:border-color .2s;max-width:320px} .ds-search:focus-within{border-color:var(--color-gold)} .ds-search input{height:40px;flex:1;min-width:0;border:0;background:transparent;outline:none;font:400 .9375rem 'IBM Plex Sans Arabic',sans-serif;color:var(--color-ink);caret-color:var(--color-gold)}"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "header",
+      "description": "Ivory sticky header; links get a gold hairline drawn from the right.",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-mark\">MIDAD</span><a href=\"#\">رجالي</a><a href=\"#\">حريمي</a><a href=\"#\">شرقي ونيش</a><a href=\"#\">الهدايا</a></nav>",
+      "css": ":host{--color-ink:#0e0d0c;--color-smoke:#3b342c;--color-gold:#b08d57;--color-gold-light:#d6b77e;--color-ivory:#f2eadb;--color-paper:#f8f3e8;--color-sand:#d8cab0;--color-muted:#5f564b;--ease-ink:cubic-bezier(0.16,1,0.3,1)} .ds-nav{direction:rtl;display:flex;align-items:center;gap:28px;height:72px;padding:0 24px;background:rgba(242,234,219,.95);border-bottom:1px solid var(--color-sand);font:400 .9375rem 'IBM Plex Sans Arabic',sans-serif} .ds-mark{font:400 .8125rem Cinzel,Georgia,serif;letter-spacing:.34em} .ds-nav a{position:relative;padding:8px 0;color:var(--color-ink);text-decoration:none} .ds-nav a::after{content:'';position:absolute;inset-inline:0;bottom:-2px;height:1px;background:var(--color-gold);transform:scaleX(0);transform-origin:right;transition:transform .3s} .ds-nav a:hover::after{transform:scaleX(1)} .ds-nav a:focus-visible{outline:2px solid var(--color-gold);outline-offset:3px}"
+    },
+    {
+      "name": "Product Card",
+      "kind": "card",
+      "refersTo": "",
+      "description": "Square card painted in the perfume world's surface (resin world shown); only the bottle lifts on hover.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-stage\"><span class=\"ds-bottle\"></span></div><div class=\"ds-body\"><h3>فيكتوري إكسير</h3><span class=\"ds-latin\">VICTORY ELIXIR</span><p class=\"ds-muted\">مستوحى من إنفيكتوس إكسير</p><div class=\"ds-foot\"><span>من ٣٥٠ ج.م</span><button aria-label=\"أضف\">+</button></div></div></article>",
+      "css": ":host{--color-ink:#0e0d0c;--color-smoke:#3b342c;--color-gold:#b08d57;--color-gold-light:#d6b77e;--color-ivory:#f2eadb;--color-paper:#f8f3e8;--color-sand:#d8cab0;--color-muted:#5f564b;--ease-ink:cubic-bezier(0.16,1,0.3,1)} .ds-card{direction:rtl;width:240px;background:#5C361B;color:#F7E9D2} .ds-stage{aspect-ratio:4/5;display:flex;align-items:flex-end;justify-content:center;padding-bottom:24px;background:radial-gradient(ellipse at 50% 80%,#E8AE5C33,transparent 65%)} .ds-bottle{width:70px;height:88px;background:linear-gradient(90deg,#1a1612,#4a4137 40%,#221d18);border-top:22px solid #b08d57;transition:transform .5s var(--ease-ink)} .ds-card:hover .ds-bottle{transform:translateY(-6px)} .ds-body{padding:0 20px 20px;display:flex;flex-direction:column;gap:4px} .ds-body h3{margin:0;font:700 1.5rem/1.25 Amiri,serif} .ds-latin{font:400 .6875rem Cinzel,serif;letter-spacing:.18em;color:#D9BF9A} .ds-muted{margin:0;font:400 .8125rem 'IBM Plex Sans Arabic',sans-serif;color:#D9BF9A} .ds-foot{display:flex;justify-content:space-between;align-items:center;padding-top:16px;font:400 .9375rem 'IBM Plex Sans Arabic',sans-serif} .ds-foot button{width:40px;height:40px;background:transparent;color:inherit;border:1px solid #F7E9D255;border-radius:0;cursor:pointer;transition:background .2s} .ds-foot button:hover{background:color-mix(in srgb,currentColor 12%,transparent)} .ds-foot button:focus-visible{outline:2px solid currentColor;outline-offset:2px}"
+    },
+    {
+      "name": "Size Picker",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "Four square size options drawn in currentColor; selected takes a full border plus an inset ring.",
+      "html": "<div class=\"ds-sizes\"><label><input type=\"radio\" name=\"s\"><b>١٠ مل</b><small>٣٥٠ ج.م</small></label><label><input type=\"radio\" name=\"s\"><b>٣٠ مل</b><small>٦٥٠ ج.م</small></label><label class=\"is-on\"><input type=\"radio\" name=\"s\" checked><b>٥٠ مل</b><small>٩٥٠ ج.م</small></label><label><input type=\"radio\" name=\"s\"><b>١٠٠ مل</b><small>١٤٥٠ ج.م</small></label></div>",
+      "css": ":host{--color-ink:#0e0d0c;--color-smoke:#3b342c;--color-gold:#b08d57;--color-gold-light:#d6b77e;--color-ivory:#f2eadb;--color-paper:#f8f3e8;--color-sand:#d8cab0;--color-muted:#5f564b;--ease-ink:cubic-bezier(0.16,1,0.3,1)} .ds-sizes{direction:rtl;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:420px;color:var(--color-ink);font-family:'IBM Plex Sans Arabic',sans-serif} .ds-sizes label{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border:1px solid color-mix(in srgb,currentColor 28%,transparent);cursor:pointer;transition:border-color .2s} .ds-sizes label:hover{border-color:color-mix(in srgb,currentColor 60%,transparent)} .ds-sizes label.is-on{border-color:currentColor;box-shadow:inset 0 0 0 1px currentColor} .ds-sizes label:has(input:focus-visible){outline:2px solid currentColor;outline-offset:2px} .ds-sizes input{position:absolute;opacity:0} .ds-sizes b{font-weight:500;font-size:.9375rem} .ds-sizes small{font-size:.75rem;opacity:.8}"
+    },
+    {
+      "name": "Wave and Ink Line",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "Signature: an ink band ending in a wave filled with the next band's colour, the gold ink line pressed along it and a spray-square mark at the crossing.",
+      "html": "<div class=\"ds-band\"><svg viewBox=\"0 0 1000 100\" preserveAspectRatio=\"none\" class=\"ds-wave\"><path d=\"M0,40 C200,10 350,80 520,55 S850,20 1000,60 L1000,100 L0,100 Z\" fill=\"#f2eadb\"/><path d=\"M960,0 L960,52 C850,20 700,40 520,55 C350,80 200,10 40,36\" fill=\"none\" stroke=\"#C9A365\" stroke-width=\"3.2\" stroke-linecap=\"round\"/><rect x=\"955\" y=\"47\" width=\"10\" height=\"10\" fill=\"#D6B77E\" transform=\"rotate(18 960 52)\"/></svg></div>",
+      "css": ":host{--color-ink:#0e0d0c;--color-smoke:#3b342c;--color-gold:#b08d57;--color-gold-light:#d6b77e;--color-ivory:#f2eadb;--color-paper:#f8f3e8;--color-sand:#d8cab0;--color-muted:#5f564b;--ease-ink:cubic-bezier(0.16,1,0.3,1)} .ds-band{background:var(--color-ink);padding-top:80px} .ds-wave{display:block;width:100%;height:clamp(44px,7vw,96px)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Calligrapher's Scroll",
+    "overview": "Midad treats a page the way a calligrapher treats a sheet: one continuous surface, written top to bottom in ink. The homepage is not a stack of banners; it is a single painted scroll. A fixed Midad frame (ink, ivory, smoke, sand) holds a sequence of full-bleed bands, and each band flows into the next through a soft wave filled with the next band's colour. Between the frame bands, each category gets its own perfume world, painted in that perfume's palette, texture and ingredients, so the page carries very different moods without ever breaking into separate boxes.\n\nOne gold ink line is written down the whole scroll as the visitor reads. It sways down a side gutter like a hand-held reed pen, presses heavier where it rides each wave across to the other side, and leaves a small gold square, the brand's spray mark, at each crossing. That line is the page's only authored motion; everything else is quiet.\n\nThe density is low and the voice restrained: large Amiri headlines, generous bands (64 to 96px of vertical padding), square-cornered controls, and gold used as a signature, never as a fill. Depth comes from light and material (lamp glow, marble, resin, silk, smoke) drawn procedurally, not from UI shadows.",
+    "keyCharacteristics": [
+      "One continuous scroll of full-bleed bands joined by soft waves; no hard section edges.",
+      "Fixed brand frame plus per-perfume worlds that bring their own palette, texture, plinth, light and line-drawn ingredients.",
+      "A single gold reed-pen line as the only authored motion, with spray-square marks at wave crossings.",
+      "Square corners everywhere except pill chips; thin 1px borders do the structural work.",
+      "Arabic-first RTL typography: Amiri for display, Plex Arabic for text, Cinzel only for Latin caps, Montserrat only for Latin data.",
+      "Smoked-glass bottles drawn to the brand guide's real millimetre proportions; no stock photography."
+    ],
+    "rules": [
+      {
+        "name": "The Gold Signature Rule",
+        "body": "Gold covers at most 10% of any view. It marks (a line, a stamp, a ring, a numeral, one CTA on ink); it never paints a band, a card or a panel.",
+        "section": "colors"
+      },
+      {
+        "name": "The Readable World Rule",
+        "body": "A perfume palette may be anything, but its text may not be unreadable. `fg` must reach 4.5:1 on `bg` and `muted` 3:1, checked at render time; a failing value falls back to whichever of Midad Black or Parchment Ivory reads better. The accent button's label is resolved the same way.",
+        "section": "colors"
+      },
+      {
+        "name": "The Next-Band Wave Rule",
+        "body": "Every band ends in a soft wave filled with the next band's background colour, so the eye never meets a straight seam. Each divider uses a different wave shape; the page never repeats one.",
+        "section": "colors"
+      },
+      {
+        "name": "The Numerals Rule",
+        "body": "Arabic UI shows Arabic-Indic numerals (prices, sizes, counts, ml, character counters), formatted through the `ar-EG` locale. Latin digits appear only inside Montserrat data captions.",
+        "section": "typography"
+      },
+      {
+        "name": "The Guest Script Rule",
+        "body": "Latin never sets running text. Cinzel is caps-only for names; Montserrat is small data only, marked `dir=\"ltr\"`. Everything a visitor reads as a sentence is Arabic.",
+        "section": "typography"
+      },
+      {
+        "name": "The RTL-First Rule",
+        "body": "Layout is authored in logical properties (start/end, inline) for RTL. The ink line begins on the right; slider \"forward\" moves visually left; ornaments in textured worlds stay on the visual (left) half so they never sit under text.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Interface Rule",
+        "body": "Controls and cards never lift. Shadows belong to drawn objects resting in light, or to layers that truly overlay the page (dropdown, toast, drawer).",
+        "section": "elevation"
+      },
+      {
+        "name": "The Painted Light Rule",
+        "body": "Atmosphere is procedural: gradients, SVG noise and line art, painted from the band's own palette. No raster backgrounds ship; textures stay off the text half.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** end every band in a wave filled with the next band's colour, and give each divider its own wave shape.",
+      "**Do** keep gold under 10% of any view: lines, stamps, rings, numerals, one CTA on ink.",
+      "**Do** let a perfume world bring its own `bg / surface / fg / muted / accent`, texture, plinth, light and ingredient drawings, and run its text colours through the contrast fallback.",
+      "**Do** use Arabic-Indic numerals in Arabic UI via the `ar-EG` formatter; reserve Latin digits for Montserrat data captions.",
+      "**Do** keep controls square with 1px hairlines; draw borders in `currentColor` so components inherit their world.",
+      "**Do** draw bottles with the guide's real proportions, and render atmosphere procedurally (gradients, SVG grain, line art).",
+      "**Do** ease object motion with the ink curve, cubic-bezier(0.16, 1, 0.3, 1), and respect reduced motion."
+    ],
+    "donts": [
+      "**Don't** add a second authored motion; the ink line is the page's only one. Hover states change colour, borders, or nudge a bottle, nothing more.",
+      "**Don't** fill bands, cards or panels with gold, or use gold as body text on ivory.",
+      "**Don't** shadow cards, buttons or chips, or lift them on hover.",
+      "**Don't** separate bands with straight rules or hard colour cuts.",
+      "**Don't** set running text in Latin, or use Cinzel and Montserrat outside names and data.",
+      "**Don't** redraw, stretch, recolour or shadow the logo, and never place the spray pattern behind it.",
+      "**Don't** use cold blue light, glossy plastic, or red roses in any world's texture or imagery.",
+      "**Don't** put texture ornament under text; it stays on the visual half of a band."
+    ]
+  }
+}
